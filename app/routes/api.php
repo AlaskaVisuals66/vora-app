@@ -3,6 +3,7 @@
 use App\Domain\Auth\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\PresenceController;
+use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\TicketController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WebhookController;
@@ -56,6 +57,9 @@ Route::prefix('v1')->group(function () {
             Route::get('whatsapp/sessions/{session}/qr',         [WhatsappSessionController::class, 'qr']);
 
             Route::apiResource('users', UserController::class)->only(['index','store','update','destroy']);
+
+            Route::get('tenant', [TenantController::class, 'show']);
+            Route::put('tenant', [TenantController::class, 'update']);
         });
     });
 });
