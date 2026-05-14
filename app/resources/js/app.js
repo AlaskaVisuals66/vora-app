@@ -7,7 +7,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from 'ziggy-js';
 import { createPinia } from 'pinia';
 import { ensureAutoLogin } from './Composables/useAuth';
-import { initTheme } from './composables/useTheme';
+import { initTheme } from './Composables/useTheme';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Vora';
 

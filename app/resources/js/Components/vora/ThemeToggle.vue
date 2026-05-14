@@ -1,7 +1,7 @@
 <script setup>
 import { Sun, Moon } from 'lucide-vue-next';
 import { Button } from '@/Components/ui/button';
-import { useTheme } from '@/composables/useTheme';
+import { useTheme } from '@/Composables/useTheme';
 
 const { theme, toggle } = useTheme();
 </script>
