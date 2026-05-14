@@ -5,14 +5,10 @@ import { Motion } from 'motion-v';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Topbar from '@/Components/Topbar.vue';
-import Card from '@/Components/ui/Card.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
-import CardHeader from '@/Components/ui/CardHeader.vue';
-import CardTitle from '@/Components/ui/CardTitle.vue';
-import CardDescription from '@/Components/ui/CardDescription.vue';
-import Badge from '@/Components/ui/Badge.vue';
-import Avatar from '@/Components/ui/Avatar.vue';
-import Skeleton from '@/Components/ui/Skeleton.vue';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Skeleton } from '@/Components/ui/skeleton';
 import {
     Inbox, Users, CheckCircle2, Clock, TrendingUp, ArrowUpRight,
 } from 'lucide-vue-next';
@@ -37,6 +33,9 @@ const kpis = computed(() => [
 ]);
 
 const maxBar = computed(() => Math.max(1, ...((data.value?.timeseries || []).map(x => x.tickets || 0))));
+
+const initials = (name) => (name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 </script>
 
 <template>
@@ -58,7 +57,7 @@ const maxBar = computed(() => Math.max(1, ...((data.value?.timeseries || []).map
                                     <div class="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
                                         <component :is="k.icon" :class="['h-4 w-4', k.accent]" />
                                     </div>
-                                    <Badge variant="muted" class="text-[10.5px]">{{ k.delta }}</Badge>
+                                    <Badge variant="outline" class="text-[10.5px]">{{ k.delta }}</Badge>
                                 </div>
                                 <div class="text-[12.5px] text-muted-foreground font-medium">{{ k.label }}</div>
                                 <div class="mt-1 flex items-baseline gap-1">
@@ -124,7 +123,7 @@ const maxBar = computed(() => Math.max(1, ...((data.value?.timeseries || []).map
                                                   :style="{ backgroundColor: s.color || '#94A3B8' }" />
                                             <span class="text-[13px] text-foreground font-medium">{{ s.name }}</span>
                                         </div>
-                                        <Badge variant="muted">{{ s.open_tickets }}</Badge>
+                                        <Badge variant="outline">{{ s.open_tickets }}</Badge>
                                     </li>
                                     <li v-if="!loading && !(data?.by_sector || []).length"
                                         class="text-[13px] text-muted-foreground py-4 text-center">
@@ -160,14 +159,14 @@ const maxBar = computed(() => Math.max(1, ...((data.value?.timeseries || []).map
                                             class="hover:bg-muted/40 transition-colors">
                                             <td class="px-6 py-3">
                                                 <div class="flex items-center gap-3">
-                                                    <Avatar :name="a.name" :status="a.status" size="sm" />
+                                                    <Avatar><AvatarFallback>{{ initials(a.name) }}</AvatarFallback></Avatar>
                                                     <span class="font-medium text-foreground">{{ a.name }}</span>
                                                 </div>
                                             </td>
                                             <td class="px-6 py-3 tabular-nums">{{ a.in_progress }}</td>
                                             <td class="px-6 py-3 tabular-nums">{{ a.resolved }}</td>
                                             <td class="px-6 py-3">
-                                                <Badge :variant="a.status === 'online' ? 'success' : 'muted'">
+                                                <Badge :variant="a.status === 'online' ? 'default' : 'outline'">
                                                     {{ a.status }}
                                                 </Badge>
                                             </td>

@@ -5,11 +5,11 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import TicketListItem from '@/Components/TicketListItem.vue';
 import MessageBubble from '@/Components/MessageBubble.vue';
 import ClientPanel from '@/Components/ClientPanel.vue';
-import Avatar from '@/Components/ui/Avatar.vue';
-import Badge from '@/Components/ui/Badge.vue';
-import Button from '@/Components/ui/Button.vue';
-import Input from '@/Components/ui/Input.vue';
-import Textarea from '@/Components/ui/Textarea.vue';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Textarea } from '@/Components/ui/textarea';
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
@@ -51,9 +51,12 @@ const statusOptions = [
 ];
 
 const statusVariant = computed(() => ({
-    queued: 'warning', open: 'success', pending: 'info',
-    resolved: 'muted', closed: 'muted', menu: 'default',
-}[store.active?.status] || 'muted'));
+    queued: 'secondary', open: 'default', pending: 'default',
+    resolved: 'outline', closed: 'outline', menu: 'default',
+}[store.active?.status] || 'outline'));
+
+const initials = (name) => (name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 async function selectTicket(id) {
     await store.openTicket(id);
@@ -209,8 +212,7 @@ onBeforeUnmount(() => {
                 <template v-if="store.active">
                     <header class="bg-card border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
                         <div class="flex items-center gap-3 min-w-0">
-                            <Avatar :name="store.active.client?.name || store.active.client?.phone"
-                                    status="online" size="md" />
+                            <Avatar><AvatarFallback>{{ initials(store.active.client?.name || store.active.client?.phone) }}</AvatarFallback></Avatar>
                             <div class="min-w-0">
                                 <div class="font-semibold text-foreground text-[14px] truncate">
                                     {{ store.active.client?.name || store.active.client?.phone }}
@@ -252,7 +254,7 @@ onBeforeUnmount(() => {
                                     class="shrink-0 text-muted-foreground" tabindex="-1">
                                 <Smile class="h-4 w-4" />
                             </Button>
-                            <Button variant="accent" size="icon" @click="send"
+                            <Button variant="default" size="icon" @click="send"
                                     :disabled="!draft.trim()" class="shrink-0">
                                 <Send class="h-4 w-4" />
                             </Button>

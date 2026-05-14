@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
-import Avatar from '@/Components/ui/Avatar.vue';
-import Badge from '@/Components/ui/Badge.vue';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Badge } from '@/Components/ui/badge';
 import { useFormat } from '@/Composables/useFormat';
 import { cn } from '@/lib/utils';
 
@@ -13,14 +13,17 @@ defineEmits(['select']);
 
 const { fromNow } = useFormat();
 
+const initials = (name) => (name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
 const statusVariant = computed(() => ({
-    queued:   'warning',
-    open:     'success',
-    pending:  'info',
-    resolved: 'muted',
-    closed:   'muted',
+    queued:   'secondary',
+    open:     'default',
+    pending:  'default',
+    resolved: 'outline',
+    closed:   'outline',
     menu:     'default',
-}[props.ticket.status] || 'muted'));
+}[props.ticket.status] || 'outline'));
 
 const statusLabel = computed(() => ({
     queued: 'Em fila', open: 'Atendendo', pending: 'Aguardando',
@@ -37,7 +40,7 @@ const statusLabel = computed(() => ({
                 ? 'bg-primary/[0.04] border-primary/20'
                 : 'border-transparent hover:bg-muted/60 hover:border-border'
         )">
-        <Avatar :name="ticket.client?.name || ticket.client?.phone" size="md" />
+        <Avatar><AvatarFallback>{{ initials(ticket.client?.name || ticket.client?.phone) }}</AvatarFallback></Avatar>
         <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between gap-2">
                 <span :class="cn(

@@ -3,13 +3,12 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Topbar from '@/Components/Topbar.vue';
-import Card from '@/Components/ui/Card.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
-import Avatar from '@/Components/ui/Avatar.vue';
-import Badge from '@/Components/ui/Badge.vue';
-import Button from '@/Components/ui/Button.vue';
-import Input from '@/Components/ui/Input.vue';
-import Dialog from '@/Components/ui/Dialog.vue';
+import { Card, CardContent } from '@/Components/ui/card';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/Components/ui/dialog';
 import { onMounted, ref, reactive, computed } from 'vue';
 import axios from 'axios';
 import { UserPlus, Users as UsersIcon, Pencil, Trash2, Power } from 'lucide-vue-next';
@@ -25,6 +24,9 @@ const form = reactive({
     name: '', email: '', phone: '', password: '',
     role: 'attendant', is_active: true,
 });
+
+const initials = (name) => (name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
 const roleLabel = (r) => ({ admin: 'Admin', supervisor: 'Supervisor', attendant: 'Atendente' }[r] || r);
 const roleOptions = [
@@ -145,7 +147,7 @@ onMounted(load);
                                             :class="{ 'opacity-60': !u.is_active }">
                                             <td class="px-6 py-3.5">
                                                 <div class="flex items-center gap-3 min-w-0">
-                                                    <Avatar :name="u.name" :status="u.status" size="sm" />
+                                                    <Avatar><AvatarFallback>{{ initials(u.name) }}</AvatarFallback></Avatar>
                                                     <div class="min-w-0">
                                                         <div class="font-medium text-foreground truncate flex items-center gap-2">
                                                             {{ u.name }}
@@ -159,12 +161,12 @@ onMounted(load);
                                                 </div>
                                             </td>
                                             <td class="px-6 py-3.5">
-                                                <Badge variant="muted">{{ roleLabel(u.role) }}</Badge>
+                                                <Badge variant="outline">{{ roleLabel(u.role) }}</Badge>
                                             </td>
                                             <td class="px-6 py-3.5 tabular-nums">{{ u.in_progress ?? 0 }}</td>
                                             <td class="px-6 py-3.5 tabular-nums">{{ u.resolved ?? 0 }}</td>
                                             <td class="px-6 py-3.5">
-                                                <Badge variant="muted">
+                                                <Badge variant="outline">
                                                     {{ u.status === 'online' ? 'Online' : 'Offline' }}
                                                 </Badge>
                                             </td>
@@ -208,7 +210,12 @@ onMounted(load);
             </div>
         </div>
 
-        <Dialog v-model:open="dialogOpen" :title="dialogTitle" :description="dialogDescription" width="max-w-lg">
+        <Dialog v-model:open="dialogOpen">
+            <DialogContent class="max-w-lg p-0">
+            <DialogHeader class="px-5 pt-5">
+                <DialogTitle>{{ dialogTitle }}</DialogTitle>
+                <DialogDescription>{{ dialogDescription }}</DialogDescription>
+            </DialogHeader>
             <form @submit.prevent="save" class="px-5 py-5 space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-1.5 sm:col-span-2">
@@ -251,11 +258,12 @@ onMounted(load);
 
                 <div class="flex justify-end gap-2 pt-2 border-t border-border -mx-5 px-5 mt-5 pt-4">
                     <Button type="button" variant="ghost" @click="dialogOpen = false">Cancelar</Button>
-                    <Button type="submit" variant="outline" :loading="saving">
+                    <Button type="submit" variant="outline" :disabled="saving">
                         {{ editing ? 'Salvar' : 'Criar usuário' }}
                     </Button>
                 </div>
             </form>
+            </DialogContent>
         </Dialog>
     </AppLayout>
 </template>

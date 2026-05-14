@@ -4,8 +4,8 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import { useAuth } from '@/Composables/useAuth';
-import Button from '@/Components/ui/Button.vue';
-import Input from '@/Components/ui/Input.vue';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
 import { Mail, Lock, AlertCircle, ArrowRight } from 'lucide-vue-next';
 
 const { login } = useAuth();
@@ -71,7 +71,7 @@ async function submit() {
                         </div>
                     </Motion>
 
-                    <Button type="submit" :loading="loading" class="w-full mt-2" size="lg">
+                    <Button type="submit" :disabled="loading" class="w-full mt-2" size="lg">
                         <span>{{ loading ? 'Entrando…' : 'Entrar' }}</span>
                         <ArrowRight v-if="!loading" class="h-4 w-4" />
                     </Button>

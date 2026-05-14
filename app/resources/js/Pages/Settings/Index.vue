@@ -3,14 +3,10 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Topbar from '@/Components/Topbar.vue';
-import Card from '@/Components/ui/Card.vue';
-import CardHeader from '@/Components/ui/CardHeader.vue';
-import CardTitle from '@/Components/ui/CardTitle.vue';
-import CardDescription from '@/Components/ui/CardDescription.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
-import Badge from '@/Components/ui/Badge.vue';
-import Button from '@/Components/ui/Button.vue';
-import Input from '@/Components/ui/Input.vue';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
 import { onMounted, ref, computed } from 'vue';
 import axios from 'axios';
 import { Plus, QrCode, RefreshCw, Trash2, Smartphone, CheckCircle2 } from 'lucide-vue-next';
@@ -53,11 +49,11 @@ async function destroy(id)   { if (confirm('Remover esta sessão WhatsApp?')) { 
 onMounted(load);
 
 const stateVariant = (state) => ({
-    open: 'success',
-    connecting: 'warning',
-    close: 'muted',
-    qr: 'info',
-}[state] || 'muted');
+    open: 'default',
+    connecting: 'secondary',
+    close: 'outline',
+    qr: 'default',
+}[state] || 'outline');
 
 const stateLabel = (state) => ({
     open: 'Conectado',
@@ -97,8 +93,8 @@ const stateLabel = (state) => ({
                             <div class="flex gap-2 mb-5">
                                 <Input v-model="newName" placeholder="Nome da instância (ex: principal)"
                                        class="flex-1" @keydown.enter.prevent="create" />
-                                <Button variant="accent" @click="create" :loading="creating"
-                                        :disabled="!newName.trim()">
+                                <Button variant="default" @click="create"
+                                        :disabled="creating || !newName.trim()">
                                     <Plus class="h-4 w-4" />
                                     Conectar número
                                 </Button>

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { useAuth } from '@/Composables/useAuth';
-import Avatar from '@/Components/ui/Avatar.vue';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import axios from 'axios';
 import {
     LayoutDashboard, MessagesSquare, Layers, Users, Settings, LogOut,
@@ -35,6 +35,9 @@ const isActive = (href) => {
     return page.url === href || page.url.startsWith(href + '/') || page.url.startsWith(href + '?');
 };
 const sectorActive = (slug) => page.url.startsWith(`/conversations/sector/${slug}`);
+
+const initials = (name) => (name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 </script>
 
 <template>
@@ -77,7 +80,7 @@ const sectorActive = (slug) => page.url.startsWith(`/conversations/sector/${slug
         <!-- User -->
         <div class="border-t border-sidebar-border p-3">
             <div class="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-white/[0.04] transition-colors">
-                <Avatar :name="user?.name" status="online" size="sm" />
+                <Avatar><AvatarFallback>{{ initials(user?.name) }}</AvatarFallback></Avatar>
                 <div class="flex-1 min-w-0">
                     <div class="text-[12.5px] font-medium text-white truncate leading-tight">{{ user?.name }}</div>
                     <div class="text-[10.5px] text-sidebar-muted truncate leading-tight mt-0.5 capitalize">{{ (user?.roles || [])[0] || 'attendant' }}</div>

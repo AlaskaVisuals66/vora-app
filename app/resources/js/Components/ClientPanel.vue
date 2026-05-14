@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue';
-import Avatar from '@/Components/ui/Avatar.vue';
-import Badge from '@/Components/ui/Badge.vue';
-import Button from '@/Components/ui/Button.vue';
-import Separator from '@/Components/ui/Separator.vue';
+import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
+import { Separator } from '@/Components/ui/separator';
 import { useFormat } from '@/Composables/useFormat';
 import { ArrowRightLeft, X, Phone, Hash, Calendar, Building2, UserCheck } from 'lucide-vue-next';
 
@@ -15,10 +15,13 @@ defineEmits(['close', 'transfer']);
 const { phone, dt } = useFormat();
 const client = computed(() => props.ticket?.client || {});
 
+const initials = (name) => (name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
 const statusVariant = computed(() => ({
-    queued: 'warning', open: 'success', pending: 'info',
-    resolved: 'muted', closed: 'muted', menu: 'default',
-}[props.ticket?.status] || 'muted'));
+    queued: 'secondary', open: 'default', pending: 'default',
+    resolved: 'outline', closed: 'outline', menu: 'default',
+}[props.ticket?.status] || 'outline'));
 </script>
 
 <template>
@@ -26,7 +29,7 @@ const statusVariant = computed(() => ({
            class="hidden xl:flex w-80 border-l border-border bg-card flex-col overflow-y-auto scrollbar-thin">
         <!-- Profile header -->
         <div class="px-6 pt-8 pb-6 text-center border-b border-border">
-            <Avatar :name="client.name || client.phone" size="xl" class="mx-auto mb-4" />
+            <Avatar class="mx-auto mb-4"><AvatarFallback>{{ initials(client.name || client.phone) }}</AvatarFallback></Avatar>
             <h3 class="font-semibold text-foreground text-[15px] tracking-tight leading-tight">
                 {{ client.name || 'Sem nome' }}
             </h3>
@@ -63,7 +66,7 @@ const statusVariant = computed(() => ({
                 </div>
 
                 <div v-if="ticket.assignee" class="flex items-start gap-3">
-                    <Avatar :name="ticket.assignee.name" size="xs" class="mt-0.5" />
+                    <Avatar class="mt-0.5"><AvatarFallback>{{ initials(ticket.assignee.name) }}</AvatarFallback></Avatar>
                     <div class="min-w-0">
                         <div class="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground font-medium mb-0.5">Atendente</div>
                         <div class="text-foreground truncate">{{ ticket.assignee.name }}</div>

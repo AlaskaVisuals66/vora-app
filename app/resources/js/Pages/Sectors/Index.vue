@@ -3,10 +3,9 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Topbar from '@/Components/Topbar.vue';
-import Card from '@/Components/ui/Card.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
-import Badge from '@/Components/ui/Badge.vue';
-import Button from '@/Components/ui/Button.vue';
+import { Card, CardContent } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
 import { onMounted, ref } from 'vue';
 import axios from 'axios';
 import { Plus, Users as UsersIcon, GitBranch, Hash, Layers } from 'lucide-vue-next';
@@ -29,7 +28,7 @@ onMounted(async () => {
     <AppLayout>
         <Topbar title="Setores" subtitle="Estrutura de atendimento e menu automatizado">
             <template #actions>
-                <Button variant="accent">
+                <Button variant="default">
                     <Plus class="h-4 w-4" />
                     Novo setor
                 </Button>
@@ -60,7 +59,7 @@ onMounted(async () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <Badge variant="muted">{{ s.open_tickets }} aberto{{ s.open_tickets === 1 ? '' : 's' }}</Badge>
+                                    <Badge variant="outline">{{ s.open_tickets }} aberto{{ s.open_tickets === 1 ? '' : 's' }}</Badge>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-2 pt-3 border-t border-border">
@@ -93,7 +92,7 @@ onMounted(async () => {
                     <p class="text-[13px] text-muted-foreground mt-1 max-w-sm">
                         Crie setores para organizar o atendimento e configurar o menu automatizado.
                     </p>
-                    <Button variant="accent" class="mt-5">
+                    <Button variant="default" class="mt-5">
                         <Plus class="h-4 w-4" />
                         Criar primeiro setor
                     </Button>
