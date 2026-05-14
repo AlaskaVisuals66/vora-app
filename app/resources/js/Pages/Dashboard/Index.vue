@@ -26,10 +26,10 @@ onMounted(async () => {
 });
 
 const kpis = computed(() => [
-    { label: 'Tickets em aberto', value: data.value?.kpis?.open_tickets,         icon: Inbox,        accent: 'text-primary',  delta: '+12%' },
-    { label: 'Na fila',           value: data.value?.kpis?.queued,               icon: Clock,        accent: 'text-amber-600',delta: '−4%'  },
-    { label: 'Resolvidos hoje',   value: data.value?.kpis?.resolved_today,       icon: CheckCircle2, accent: 'text-emerald-600',delta: '+8%' },
-    { label: 'TMA',               value: data.value?.kpis?.avg_handling_minutes, icon: TrendingUp,   accent: 'text-accent',   suffix: 'min', delta: '−15%' },
+    { label: 'Tickets em aberto', value: data.value?.kpis?.open_tickets,         icon: Inbox,        accent: 'text-foreground', delta: '+12%' },
+    { label: 'Na fila',           value: data.value?.kpis?.queued,               icon: Clock,        accent: 'text-foreground', delta: '−4%'  },
+    { label: 'Resolvidos hoje',   value: data.value?.kpis?.resolved_today,       icon: CheckCircle2, accent: 'text-foreground', delta: '+8%' },
+    { label: 'TMA',               value: data.value?.kpis?.avg_handling_minutes, icon: TrendingUp,   accent: 'text-foreground', suffix: 'min', delta: '−15%' },
 ]);
 
 const maxBar = computed(() => Math.max(1, ...((data.value?.timeseries || []).map(x => x.tickets || 0))));
@@ -82,7 +82,7 @@ const initials = (name) => (name || '?')
                                         <CardTitle>Volume últimos 14 dias</CardTitle>
                                         <CardDescription>Tickets abertos por dia</CardDescription>
                                     </div>
-                                    <div class="flex items-center gap-1.5 text-[12px] text-emerald-600 font-medium">
+                                    <div class="flex items-center gap-1.5 text-[12px] text-muted-foreground font-medium">
                                         <ArrowUpRight class="h-3.5 w-3.5" />
                                         12.4% vs período anterior
                                     </div>
@@ -91,7 +91,7 @@ const initials = (name) => (name || '?')
                             <CardContent>
                                 <div class="h-64 flex items-end gap-1.5 pt-2">
                                     <div v-for="(d, i) in (data?.timeseries || [])" :key="i"
-                                         class="group relative flex-1 rounded-t-md bg-gradient-to-t from-primary to-primary/60 hover:from-accent hover:to-accent/70 transition-all duration-200"
+                                         class="group relative flex-1 rounded-t-md bg-foreground/85 hover:bg-foreground transition-all duration-200"
                                          :style="{ height: ((d.tickets || 0) / maxBar) * 100 + '%' }">
                                         <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
                                             {{ d.tickets }} · {{ d.date }}

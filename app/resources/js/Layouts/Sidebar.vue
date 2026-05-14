@@ -37,8 +37,8 @@ function isActive(href) {
         <!-- Wordmark -->
         <div class="flex h-14 items-center px-4">
             <span class="text-[17px] font-semibold tracking-tight text-white">
-                <template v-if="expanded()">Vora<span class="text-vora-orange">.</span></template>
-                <template v-else>V<span class="text-vora-orange">.</span></template>
+                <template v-if="expanded()">Vora<span class="text-sidebar-muted">.</span></template>
+                <template v-else>V<span class="text-sidebar-muted">.</span></template>
             </span>
         </div>
 
@@ -51,8 +51,8 @@ function isActive(href) {
                             :href="item.href"
                             class="flex items-center gap-3 rounded-[var(--radius)] px-3 py-2 text-[13px] font-medium transition-colors"
                             :class="isActive(item.href)
-                                ? 'bg-sidebar-active text-white'
-                                : 'text-sidebar-foreground hover:bg-sidebar-accent'"
+                                ? 'bg-sidebar-active text-sidebar font-semibold'
+                                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'"
                         >
                             <component :is="item.icon" class="h-[18px] w-[18px] shrink-0" />
                             <span v-if="expanded()" class="truncate">{{ item.label }}</span>

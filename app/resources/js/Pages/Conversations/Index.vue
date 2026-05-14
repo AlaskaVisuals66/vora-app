@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
                 </template>
 
                 <div v-else class="flex-1 flex flex-col items-center justify-center text-center p-8">
-                    <div class="h-16 w-16 rounded-2xl bg-vora-mark flex items-center justify-center text-white mb-5">
+                    <div class="h-16 w-16 rounded-2xl bg-vora-mark flex items-center justify-center mb-5">
                         <MessagesSquare class="h-7 w-7" />
                     </div>
                     <h3 class="text-[16px] font-semibold text-foreground tracking-tight">

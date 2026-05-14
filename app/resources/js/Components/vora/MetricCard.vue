@@ -23,7 +23,7 @@ const deltaPositive = computed(() => (props.delta ?? 0) >= 0);
             {{ value }}
         </p>
         <div v-if="delta !== null" class="mt-1 flex items-center gap-1 text-[12px] font-medium"
-             :class="deltaPositive ? 'text-emerald-600' : 'text-destructive'">
+             :class="deltaPositive ? 'text-foreground' : 'text-muted-foreground'">
             <component :is="deltaPositive ? TrendingUp : TrendingDown" class="h-3.5 w-3.5" />
             {{ Math.abs(delta) }}%
         </div>

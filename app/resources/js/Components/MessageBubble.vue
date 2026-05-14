@@ -60,7 +60,7 @@ const isRead = computed(() => props.message.status === 'read');
             ]">
                 <span>{{ time(message.sent_at || message.created_at) }}</span>
                 <component v-if="!isInbound && StatusIcon" :is="StatusIcon"
-                           :class="['h-3 w-3', isRead ? 'text-sky-300' : '']" />
+                           :class="['h-3 w-3', isRead ? 'text-primary-foreground' : '']" />
             </div>
         </div>
     </div>

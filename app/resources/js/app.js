@@ -25,6 +25,6 @@ ensureAutoLogin().finally(() => {
                 .use(pinia)
                 .mount(el);
         },
-        progress: { color: '#FF5A1F', showSpinner: false },
+        progress: { color: '#0A0A0A', showSpinner: false },
     });
 });

@@ -124,7 +124,7 @@ const stateLabel = (state) => ({
                                                 <Badge :variant="stateVariant(s.state)">{{ stateLabel(s.state) }}</Badge>
                                             </td>
                                             <td class="px-4 py-3">
-                                                <span v-if="s.is_primary" class="inline-flex items-center gap-1 text-[12px] text-emerald-600 font-medium">
+                                                <span v-if="s.is_primary" class="inline-flex items-center gap-1 text-[12px] text-foreground font-medium">
                                                     <CheckCircle2 class="h-3.5 w-3.5" />
                                                     Sim
                                                 </span>
