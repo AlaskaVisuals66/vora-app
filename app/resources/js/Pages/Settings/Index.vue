@@ -110,7 +110,7 @@ onMounted(() => { load(); loadTenant(); });
 <template>
     <Head title="Configurações — Vora" />
     <AppLayout title="Configurações">
-        <div class="px-8 py-8 space-y-6 max-w-[1400px]">
+        <div class="px-8 py-8 space-y-6 max-w-[1400px] mx-auto">
 
             <PageHeader title="Configurações" description="Empresa, sessões WhatsApp e integrações" />
 

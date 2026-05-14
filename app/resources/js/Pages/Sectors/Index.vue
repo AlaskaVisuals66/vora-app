@@ -105,7 +105,7 @@ onMounted(load);
 <template>
     <Head title="Setores — Vora" />
     <AppLayout title="Setores">
-        <div class="px-8 py-8 max-w-[1400px]">
+        <div class="px-8 py-8 max-w-[1400px] mx-auto">
             <PageHeader title="Setores" description="Estrutura de atendimento e menu automatizado">
                 <template #actions>
                     <Button v-if="isAdmin" variant="default" @click="openCreate()">

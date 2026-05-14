@@ -114,7 +114,7 @@ onMounted(load);
 <template>
     <Head title="Usuários — Vora" />
     <AppLayout title="Usuários">
-        <div class="px-8 py-8 max-w-[1400px]">
+        <div class="px-8 py-8 max-w-[1400px] mx-auto">
                 <PageHeader title="Usuários" description="Atendentes, supervisores e administradores">
                     <template #actions>
                         <Button variant="outline" @click="openCreate">

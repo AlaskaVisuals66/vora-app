@@ -70,7 +70,7 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
 <template>
     <Head title="Início — Vora" />
     <AppLayout title="Início">
-        <div class="px-8 py-8 space-y-8 max-w-[1200px]">
+        <div class="px-8 py-8 space-y-8 max-w-[1200px] mx-auto">
 
             <PageHeader title="Início" description="Veja como está o atendimento hoje" />
 

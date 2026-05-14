@@ -66,7 +66,7 @@ async function save() {
 <template>
     <Head title="Perfil — Vora" />
     <AppLayout title="Perfil">
-        <div class="px-8 py-8 max-w-[760px]">
+        <div class="px-8 py-8 max-w-[760px] mx-auto">
             <PageHeader title="Perfil" description="Suas informações de conta e segurança" />
 
             <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
