@@ -18,7 +18,7 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Inter', '"Inter var"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
-                display: ['"Cal Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                display: ['Inter', '"Inter var"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
                 mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
             },
             colors: {
@@ -57,19 +57,22 @@ export default {
                 },
                 // Vora brand tokens (raw access for gradients/brand surfaces)
                 vora: {
-                    navy:   '#00153D',
-                    orange: '#FF5A1F',
-                    red:    '#FF3B30',
-                    bg:     '#F5F7FA',
-                    border: '#E5E7EB',
-                    muted:  '#6B7280',
+                    navy:        '#071225',
+                    'navy-deep': '#0F1B33',
+                    orange:      '#F04A24',
+                    'orange-light': '#FF7A3D',
+                    bg:          '#F6F7F9',
+                    border:      '#E5E7EB',
+                    text:        '#08111F',
+                    muted:       '#667085',
                 },
                 sidebar: {
-                    DEFAULT: '#0A0F1F',
-                    foreground: '#E2E8F0',
-                    muted: '#94A3B8',
-                    accent: '#142042',
-                    border: '#1E293B',
+                    DEFAULT:    '#071225',
+                    foreground: '#C7CDD9',
+                    muted:      '#8A93A6',
+                    accent:     '#0F1B33',
+                    active:     '#F04A24',
+                    border:     '#1E2A47',
                 },
             },
             borderRadius: {
@@ -82,7 +85,6 @@ export default {
                 card:    '0 1px 2px rgba(15, 23, 42, 0.04)',
                 pop:     '0 4px 24px -8px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06)',
                 ring:    '0 0 0 4px rgba(0, 21, 61, 0.10)',
-                accent:  '0 8px 24px -6px rgba(255, 90, 31, 0.35)',
             },
             keyframes: {
                 'accordion-down': { from: { height: 0 }, to: { height: 'var(--radix-accordion-content-height)' } },
