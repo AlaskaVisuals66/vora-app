@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Topbar from '@/Components/Topbar.vue';
+import PageHeader from '@/Components/vora/PageHeader.vue';
 import { Card, CardContent } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
@@ -25,18 +25,18 @@ onMounted(async () => {
 
 <template>
     <Head title="Setores — Vora" />
-    <AppLayout>
-        <Topbar title="Setores" subtitle="Estrutura de atendimento e menu automatizado">
-            <template #actions>
-                <Button variant="default">
-                    <Plus class="h-4 w-4" />
-                    Novo setor
-                </Button>
-            </template>
-        </Topbar>
-
+    <AppLayout title="Setores">
         <div class="flex-1 overflow-y-auto scrollbar-thin">
             <div class="px-8 py-8 max-w-[1400px]">
+                <PageHeader title="Setores" description="Estrutura de atendimento e menu automatizado">
+                    <template #actions>
+                        <Button variant="default">
+                            <Plus class="h-4 w-4" />
+                            Novo setor
+                        </Button>
+                    </template>
+                </PageHeader>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <Motion v-for="(s, idx) in sectors" :key="s.id"
                             :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"

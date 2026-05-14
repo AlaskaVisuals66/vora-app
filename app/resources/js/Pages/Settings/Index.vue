@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Topbar from '@/Components/Topbar.vue';
+import PageHeader from '@/Components/vora/PageHeader.vue';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
@@ -65,11 +65,11 @@ const stateLabel = (state) => ({
 
 <template>
     <Head title="Configurações — Vora" />
-    <AppLayout>
-        <Topbar title="Configurações" subtitle="Sessões WhatsApp e parâmetros do tenant" />
-
+    <AppLayout title="Configurações">
         <div class="flex-1 overflow-y-auto scrollbar-thin">
             <div class="px-8 py-8 space-y-6 max-w-[1400px]">
+
+                <PageHeader title="Configurações" description="Sessões WhatsApp e parâmetros do tenant" />
 
                 <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
                         :transition="{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }">

@@ -2,7 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Topbar from '@/Components/Topbar.vue';
+import PageHeader from '@/Components/vora/PageHeader.vue';
 import { Card, CardContent } from '@/Components/ui/card';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
@@ -113,18 +113,18 @@ onMounted(load);
 
 <template>
     <Head title="Usuários — Vora" />
-    <AppLayout>
-        <Topbar title="Usuários" subtitle="Atendentes, supervisores e administradores">
-            <template #actions>
-                <Button variant="outline" @click="openCreate">
-                    <UserPlus class="h-4 w-4" />
-                    Convidar usuário
-                </Button>
-            </template>
-        </Topbar>
-
+    <AppLayout title="Usuários">
         <div class="flex-1 overflow-y-auto scrollbar-thin">
             <div class="px-8 py-8 max-w-[1400px]">
+                <PageHeader title="Usuários" description="Atendentes, supervisores e administradores">
+                    <template #actions>
+                        <Button variant="outline" @click="openCreate">
+                            <UserPlus class="h-4 w-4" />
+                            Convidar usuário
+                        </Button>
+                    </template>
+                </PageHeader>
+
                 <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
                         :transition="{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }">
                     <Card>

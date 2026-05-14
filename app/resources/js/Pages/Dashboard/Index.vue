@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Topbar from '@/Components/Topbar.vue';
+import PageHeader from '@/Components/vora/PageHeader.vue';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
@@ -40,11 +40,11 @@ const initials = (name) => (name || '?')
 
 <template>
     <Head title="Dashboard — Vora" />
-    <AppLayout>
-        <Topbar title="Dashboard" subtitle="Visão geral do atendimento em tempo real" />
-
+    <AppLayout title="Dashboard">
         <div class="flex-1 overflow-y-auto scrollbar-thin">
             <div class="px-8 py-8 space-y-8 max-w-[1400px]">
+
+                <PageHeader title="Dashboard" description="Visão geral do atendimento em tempo real" />
 
                 <!-- KPIs -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
