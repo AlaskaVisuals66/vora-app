@@ -3,6 +3,7 @@
 use App\Domain\Auth\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\PresenceController;
+use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\TicketController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -31,14 +32,7 @@ Route::prefix('v1')->group(function () {
         Route::get('presence/ping',     [PresenceController::class, 'ping']);
         Route::post('presence/typing',  [PresenceController::class, 'typing']);
 
-        Route::get('sectors', function (\Illuminate\Http\Request $request) {
-            return ['data' => \App\Domain\Sector\Models\Sector::query()
-                ->where('tenant_id', $request->user()->tenant_id)
-                ->whereNull('parent_id')
-                ->where('active', true)
-                ->orderBy('order')
-                ->get(['id','name','slug','color','menu_key'])];
-        });
+        Route::get('sectors', [SectorController::class, 'index']);
 
         Route::get('tickets',                    [TicketController::class, 'index']);
         Route::get('tickets/{ticket}',           [TicketController::class, 'show']);
@@ -57,6 +51,10 @@ Route::prefix('v1')->group(function () {
             Route::get('whatsapp/sessions/{session}/qr',         [WhatsappSessionController::class, 'qr']);
 
             Route::apiResource('users', UserController::class)->only(['index','store','update','destroy']);
+
+            Route::post('sectors',            [SectorController::class, 'store']);
+            Route::put('sectors/{sector}',    [SectorController::class, 'update']);
+            Route::delete('sectors/{sector}', [SectorController::class, 'destroy']);
 
             Route::get('tenant', [TenantController::class, 'show']);
             Route::put('tenant', [TenantController::class, 'update']);

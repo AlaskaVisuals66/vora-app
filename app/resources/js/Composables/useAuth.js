@@ -32,7 +32,8 @@ export function useAuth() {
         try { return JSON.parse(localStorage.getItem('helpdesk.user') || 'null'); } catch (_) { return null; }
     });
 
-    const hasRole = (role) => (user.value?.roles || []).includes(role);
+    const hasRole = (role) => (user.value?.roles || [])
+        .some((r) => (typeof r === 'string' ? r : r?.name) === role);
     const isAdmin = computed(() => hasRole('admin'));
     const isSupervisor = computed(() => hasRole('supervisor'));
     const isAttendant = computed(() => hasRole('attendant'));
