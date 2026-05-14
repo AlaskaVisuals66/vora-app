@@ -18,7 +18,7 @@ const expanded = () => !collapsed.value || hovered.value;
 const page = usePage();
 const { user } = useAuth();
 const nav = [
-    { label: 'Dashboard',  icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Início',     icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Conversas',  icon: MessagesSquare,  href: '/conversations' },
     { label: 'Setores',    icon: Building2,       href: '/sectors' },
     { label: 'Usuários',   icon: Users,           href: '/users' },

@@ -21,6 +21,7 @@ class AnalyticsController extends Controller
 
         $kpis = [
             'open_tickets'          => Ticket::where('tenant_id', $tenantId)->whereIn('status', ['open','pending'])->count(),
+            'in_progress'           => Ticket::where('tenant_id', $tenantId)->whereIn('status', ['open','pending'])->whereNotNull('assigned_to')->count(),
             'queued'                => Ticket::where('tenant_id', $tenantId)->where('status', 'queued')->count(),
             'resolved_today'        => Ticket::where('tenant_id', $tenantId)->where('status', 'closed')->where('closed_at', '>=', $today)->count(),
             'avg_handling_minutes'  => (int) round(((float) Ticket::where('tenant_id', $tenantId)->whereNotNull('resolution_seconds')->avg('resolution_seconds')) / 60),

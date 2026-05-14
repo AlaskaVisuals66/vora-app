@@ -5,13 +5,12 @@ import { Motion } from 'motion-v';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/vora/PageHeader.vue';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/Components/ui/card';
+import EmptyState from '@/Components/vora/EmptyState.vue';
+import { Card } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Skeleton } from '@/Components/ui/skeleton';
-import {
-    Inbox, Users, CheckCircle2, Clock, TrendingUp, ArrowUpRight,
-} from 'lucide-vue-next';
+import { Inbox, Headphones, CheckCircle2, Clock, Users, BarChart3 } from 'lucide-vue-next';
 
 const data = ref(null);
 const loading = ref(true);
@@ -25,162 +24,217 @@ onMounted(async () => {
     }
 });
 
-const kpis = computed(() => [
-    { label: 'Tickets em aberto', value: data.value?.kpis?.open_tickets,         icon: Inbox,        accent: 'text-foreground', delta: '+12%' },
-    { label: 'Na fila',           value: data.value?.kpis?.queued,               icon: Clock,        accent: 'text-foreground', delta: '−4%'  },
-    { label: 'Resolvidos hoje',   value: data.value?.kpis?.resolved_today,       icon: CheckCircle2, accent: 'text-foreground', delta: '+8%' },
-    { label: 'TMA',               value: data.value?.kpis?.avg_handling_minutes, icon: TrendingUp,   accent: 'text-foreground', suffix: 'min', delta: '−15%' },
+const cards = computed(() => [
+    {
+        label: 'Tickets em aberto',
+        value: data.value?.kpis?.open_tickets ?? 0,
+        icon: Inbox,
+        hint: 'Aguardando atendimento',
+    },
+    {
+        label: 'Em atendimento',
+        value: data.value?.kpis?.in_progress ?? 0,
+        icon: Headphones,
+        hint: 'Sendo atendidos agora',
+    },
+    {
+        label: 'Resolvidos hoje',
+        value: data.value?.kpis?.resolved_today ?? 0,
+        icon: CheckCircle2,
+        hint: 'Finalizados hoje',
+    },
+    {
+        label: 'Tempo médio',
+        value: Math.max(0, data.value?.kpis?.avg_handling_minutes ?? 0),
+        icon: Clock,
+        suffix: 'min',
+        hint: 'Para resolver um ticket',
+    },
 ]);
 
-const maxBar = computed(() => Math.max(1, ...((data.value?.timeseries || []).map(x => x.tickets || 0))));
+// Last 7 days only — fewer data points, faster to read.
+const week = computed(() => (data.value?.timeseries || []).slice(-7));
+const maxTickets = computed(() => Math.max(1, ...week.value.map(d => d.tickets || 0)));
+const barHeight = (d) => `${Math.max(3, Math.round(((d.tickets || 0) / maxTickets.value) * 100))}%`;
+
+const sectors = computed(() => data.value?.by_sector || []);
+const attendants = computed(() => data.value?.by_attendant || []);
 
 const initials = (name) => (name || '?')
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+
+const roleLabels = { admin: 'Admin', supervisor: 'Supervisor', attendant: 'Atendente' };
+const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
 </script>
 
 <template>
-    <Head title="Dashboard — Vora" />
-    <AppLayout title="Dashboard">
-        <div class="px-8 py-8 space-y-8 max-w-[1400px]">
+    <Head title="Início — Vora" />
+    <AppLayout title="Início">
+        <div class="px-8 py-8 space-y-8 max-w-[1200px]">
 
-                <PageHeader title="Dashboard" description="Visão geral do atendimento em tempo real" />
+            <PageHeader title="Início" description="Veja como está o atendimento hoje" />
 
-                <!-- KPIs -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <Motion v-for="(k, idx) in kpis" :key="k.label"
-                            :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
-                            :transition="{ delay: idx * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }">
-                        <Card class="hover:shadow-pop transition-shadow duration-200">
-                            <CardContent class="pt-6 pb-5">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="h-9 w-9 rounded-lg bg-muted flex items-center justify-center">
-                                        <component :is="k.icon" :class="['h-4 w-4', k.accent]" />
-                                    </div>
-                                    <Badge variant="outline" class="text-[10.5px]">{{ k.delta }}</Badge>
-                                </div>
-                                <div class="text-[12.5px] text-muted-foreground font-medium">{{ k.label }}</div>
-                                <div class="mt-1 flex items-baseline gap-1">
-                                    <Skeleton v-if="loading" class="h-8 w-16" />
-                                    <span v-else class="text-[28px] font-semibold text-foreground tracking-tight tabular-nums">
-                                        {{ k.value ?? '—' }}
-                                    </span>
-                                    <span v-if="k.suffix" class="text-[13px] text-muted-foreground">{{ k.suffix }}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </Motion>
-                </div>
-
-                <!-- Timeseries + by sector -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
-                            :transition="{ delay: 0.25, duration: 0.4 }" class="lg:col-span-2">
-                        <Card>
-                            <CardHeader>
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Volume últimos 14 dias</CardTitle>
-                                        <CardDescription>Tickets abertos por dia</CardDescription>
-                                    </div>
-                                    <div class="flex items-center gap-1.5 text-[12px] text-muted-foreground font-medium">
-                                        <ArrowUpRight class="h-3.5 w-3.5" />
-                                        12.4% vs período anterior
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div class="h-64 flex items-end gap-1.5 pt-2">
-                                    <div v-for="(d, i) in (data?.timeseries || [])" :key="i"
-                                         class="group relative flex-1 rounded-t-md bg-foreground/85 hover:bg-foreground transition-all duration-200"
-                                         :style="{ height: ((d.tickets || 0) / maxBar) * 100 + '%' }">
-                                        <div class="absolute -top-7 left-1/2 -translate-x-1/2 bg-foreground text-background text-[10px] font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none whitespace-nowrap">
-                                            {{ d.tickets }} · {{ d.date }}
-                                        </div>
-                                    </div>
-                                    <div v-if="!loading && !(data?.timeseries || []).length"
-                                         class="w-full text-center text-[13px] text-muted-foreground">
-                                        Sem dados
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </Motion>
-
-                    <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
-                            :transition="{ delay: 0.32, duration: 0.4 }">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Por setor</CardTitle>
-                                <CardDescription>Tickets ativos</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ul class="space-y-3">
-                                    <li v-for="s in (data?.by_sector || [])" :key="s.id"
-                                        class="flex items-center justify-between group">
-                                        <div class="flex items-center gap-2.5">
-                                            <span class="h-2 w-2 rounded-full"
-                                                  :style="{ backgroundColor: s.color || '#94A3B8' }" />
-                                            <span class="text-[13px] text-foreground font-medium">{{ s.name }}</span>
-                                        </div>
-                                        <Badge variant="outline">{{ s.open_tickets }}</Badge>
-                                    </li>
-                                    <li v-if="!loading && !(data?.by_sector || []).length"
-                                        class="text-[13px] text-muted-foreground py-4 text-center">
-                                        Sem dados
-                                    </li>
-                                </ul>
-                            </CardContent>
-                        </Card>
-                    </Motion>
-                </div>
-
-                <!-- Attendants table -->
-                <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
-                        :transition="{ delay: 0.4, duration: 0.4 }">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Atendentes</CardTitle>
-                            <CardDescription>Carga atual e desempenho do dia</CardDescription>
-                        </CardHeader>
-                        <CardContent class="px-0 pb-0">
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-[13px]">
-                                    <thead>
-                                        <tr class="border-y border-border bg-muted/40">
-                                            <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Nome</th>
-                                            <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Em atendimento</th>
-                                            <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Resolvidos</th>
-                                            <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-border">
-                                        <tr v-for="a in (data?.by_attendant || [])" :key="a.id"
-                                            class="hover:bg-muted/40 transition-colors">
-                                            <td class="px-6 py-3">
-                                                <div class="flex items-center gap-3">
-                                                    <Avatar><AvatarFallback>{{ initials(a.name) }}</AvatarFallback></Avatar>
-                                                    <span class="font-medium text-foreground">{{ a.name }}</span>
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-3 tabular-nums">{{ a.in_progress }}</td>
-                                            <td class="px-6 py-3 tabular-nums">{{ a.resolved }}</td>
-                                            <td class="px-6 py-3">
-                                                <Badge :variant="a.status === 'online' ? 'default' : 'outline'">
-                                                    {{ a.status }}
-                                                </Badge>
-                                            </td>
-                                        </tr>
-                                        <tr v-if="!loading && !(data?.by_attendant || []).length">
-                                            <td colspan="4" class="text-center text-[13px] text-muted-foreground py-10">
-                                                Nenhum atendente cadastrado
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <Motion v-for="(c, idx) in cards" :key="c.label"
+                        :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
+                        :transition="{ delay: idx * 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }">
+                    <Card class="p-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[13px] font-medium text-muted-foreground">{{ c.label }}</span>
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                                <component :is="c.icon" class="h-4 w-4 text-muted-foreground" />
                             </div>
-                        </CardContent>
+                        </div>
+                        <div class="mt-5 flex items-baseline gap-1.5">
+                            <Skeleton v-if="loading" class="h-9 w-20" />
+                            <template v-else>
+                                <span class="text-[34px] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+                                    {{ c.value }}
+                                </span>
+                                <span v-if="c.suffix" class="text-[15px] text-muted-foreground">{{ c.suffix }}</span>
+                            </template>
+                        </div>
+                        <p class="mt-2.5 text-[12px] text-muted-foreground">{{ c.hint }}</p>
                     </Card>
                 </Motion>
+            </div>
+
+            <!-- Chart + sectors -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <Motion :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
+                        :transition="{ delay: 0.24, duration: 0.35 }" class="lg:col-span-2">
+                    <Card class="p-6">
+                        <div class="mb-1">
+                            <h3 class="text-[15px] font-semibold tracking-tight text-foreground">
+                                Atendimentos nos últimos 7 dias
+                            </h3>
+                            <p class="text-[12.5px] text-muted-foreground">Quantos tickets foram abertos por dia</p>
+                        </div>
+
+                        <div v-if="loading" class="mt-6 flex items-end gap-2.5 h-44">
+                            <Skeleton v-for="i in 7" :key="i" class="flex-1" :style="{ height: (30 + i * 8) + '%' }" />
+                        </div>
+
+                        <template v-else-if="week.length">
+                            <div class="mt-6 flex items-end gap-2.5 h-44">
+                                <div v-for="(d, i) in week" :key="i"
+                                     class="group relative flex-1 rounded-t-md bg-foreground/75 hover:bg-foreground transition-colors duration-200"
+                                     :style="{ height: barHeight(d) }">
+                                    <div class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-[11px] font-medium text-background opacity-0 transition-opacity group-hover:opacity-100">
+                                        {{ d.tickets }} atendimento{{ d.tickets === 1 ? '' : 's' }} · {{ d.date }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2.5 flex gap-2.5">
+                                <span v-for="(d, i) in week" :key="i"
+                                      class="flex-1 text-center text-[11px] text-muted-foreground tabular-nums">
+                                    {{ d.date }}
+                                </span>
+                            </div>
+                        </template>
+
+                        <EmptyState v-else :icon="BarChart3" title="Ainda sem dados"
+                                    description="Os atendimentos aparecem aqui assim que começarem." />
+                    </Card>
+                </Motion>
+
+                <Motion :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
+                        :transition="{ delay: 0.3, duration: 0.35 }">
+                    <Card class="p-6">
+                        <div class="mb-3">
+                            <h3 class="text-[15px] font-semibold tracking-tight text-foreground">Por setor</h3>
+                            <p class="text-[12.5px] text-muted-foreground">Tickets ativos em cada setor</p>
+                        </div>
+
+                        <div v-if="loading" class="space-y-3 pt-1">
+                            <div v-for="i in 4" :key="i" class="flex items-center justify-between">
+                                <Skeleton class="h-3.5 w-1/2" />
+                                <Skeleton class="h-3.5 w-6" />
+                            </div>
+                        </div>
+
+                        <ul v-else-if="sectors.length" class="divide-y divide-border">
+                            <li v-for="s in sectors" :key="s.id"
+                                class="flex items-center justify-between py-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <span class="h-2 w-2 rounded-full shrink-0"
+                                          :style="{ backgroundColor: s.color || '#94A3B8' }" />
+                                    <span class="text-[13px] text-foreground truncate">{{ s.name }}</span>
+                                </div>
+                                <span class="text-[13px] font-semibold text-foreground tabular-nums">{{ s.open_tickets }}</span>
+                            </li>
+                        </ul>
+
+                        <p v-else class="text-[13px] text-muted-foreground py-6 text-center">
+                            Nenhum setor cadastrado ainda.
+                        </p>
+                    </Card>
+                </Motion>
+            </div>
+
+            <!-- Attendants -->
+            <Motion :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
+                    :transition="{ delay: 0.36, duration: 0.35 }">
+                <Card class="overflow-hidden">
+                    <div class="px-6 py-5">
+                        <h3 class="text-[15px] font-semibold tracking-tight text-foreground">Atendentes</h3>
+                        <p class="text-[12.5px] text-muted-foreground">Quem está atendendo agora</p>
+                    </div>
+
+                    <div v-if="loading" class="px-6 pb-6 space-y-2">
+                        <Skeleton v-for="i in 4" :key="i" class="h-12 w-full" />
+                    </div>
+
+                    <div v-else-if="attendants.length" class="overflow-x-auto">
+                        <table class="w-full text-[13px]">
+                            <thead>
+                                <tr class="border-y border-border bg-muted/40">
+                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Atendente</th>
+                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Função</th>
+                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Em atendimento</th>
+                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Resolvidos hoje</th>
+                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-border">
+                                <tr v-for="a in attendants" :key="a.id"
+                                    class="hover:bg-muted/40 transition-colors">
+                                    <td class="px-6 py-3.5">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <Avatar class="h-9 w-9">
+                                                <AvatarFallback class="text-[12px]">{{ initials(a.name) }}</AvatarFallback>
+                                            </Avatar>
+                                            <div class="min-w-0">
+                                                <div class="font-medium text-foreground truncate">{{ a.name }}</div>
+                                                <div class="text-[11.5px] text-muted-foreground truncate">{{ a.email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-3.5">
+                                        <Badge variant="outline">{{ roleLabel(a.role) }}</Badge>
+                                    </td>
+                                    <td class="px-6 py-3.5 tabular-nums text-foreground">{{ a.in_progress }}</td>
+                                    <td class="px-6 py-3.5 tabular-nums text-foreground">{{ a.resolved }}</td>
+                                    <td class="px-6 py-3.5">
+                                        <span class="inline-flex items-center gap-2">
+                                            <span class="h-2 w-2 rounded-full"
+                                                  :class="a.status === 'online' ? 'bg-foreground' : 'bg-muted-foreground/30'" />
+                                            <span class="text-[12.5px]"
+                                                  :class="a.status === 'online' ? 'text-foreground' : 'text-muted-foreground'">
+                                                {{ a.status === 'online' ? 'Online' : 'Offline' }}
+                                            </span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <EmptyState v-else :icon="Users" title="Nenhum atendente cadastrado"
+                                description="Convide sua equipe na página de Usuários para começar a atender." />
+                </Card>
+            </Motion>
         </div>
     </AppLayout>
 </template>
