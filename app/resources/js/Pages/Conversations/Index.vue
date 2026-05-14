@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
 <template>
     <Head :title="currentSector ? `Conversas — ${currentSector.name}` : 'Conversas — Vora'" />
     <AppLayout>
-        <div class="flex h-screen overflow-hidden">
+        <div class="flex h-full overflow-hidden">
 
             <!-- Lista de tickets -->
             <section class="w-[340px] border-r border-border bg-card flex flex-col">
@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
                 </template>
 
                 <div v-else class="flex-1 flex flex-col items-center justify-center text-center p-8">
-                    <div class="h-16 w-16 rounded-2xl bg-vora-mark flex items-center justify-center text-white mb-5 shadow-accent">
+                    <div class="h-16 w-16 rounded-2xl bg-vora-mark flex items-center justify-center text-white mb-5">
                         <MessagesSquare class="h-7 w-7" />
                     </div>
                     <h3 class="text-[16px] font-semibold text-foreground tracking-tight">

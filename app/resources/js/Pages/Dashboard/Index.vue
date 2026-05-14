@@ -41,8 +41,7 @@ const initials = (name) => (name || '?')
 <template>
     <Head title="Dashboard — Vora" />
     <AppLayout title="Dashboard">
-        <div class="flex-1 overflow-y-auto scrollbar-thin">
-            <div class="px-8 py-8 space-y-8 max-w-[1400px]">
+        <div class="px-8 py-8 space-y-8 max-w-[1400px]">
 
                 <PageHeader title="Dashboard" description="Visão geral do atendimento em tempo real" />
 
@@ -182,7 +181,6 @@ const initials = (name) => (name || '?')
                         </CardContent>
                     </Card>
                 </Motion>
-            </div>
         </div>
     </AppLayout>
 </template>

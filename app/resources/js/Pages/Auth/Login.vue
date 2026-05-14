@@ -34,7 +34,7 @@ async function submit() {
                 :transition="{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }">
             <!-- Brand mark above card -->
             <div class="text-center mb-8">
-                <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-vora-mark text-white text-lg font-bold mb-4 shadow-accent">
+                <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-vora-mark text-white text-lg font-bold mb-4">
                     V
                 </div>
                 <h1 class="text-[22px] font-semibold text-white tracking-tight">Bem-vindo de volta</h1>

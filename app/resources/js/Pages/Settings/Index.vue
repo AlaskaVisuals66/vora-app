@@ -66,8 +66,7 @@ const stateLabel = (state) => ({
 <template>
     <Head title="Configurações — Vora" />
     <AppLayout title="Configurações">
-        <div class="flex-1 overflow-y-auto scrollbar-thin">
-            <div class="px-8 py-8 space-y-6 max-w-[1400px]">
+        <div class="px-8 py-8 space-y-6 max-w-[1400px]">
 
                 <PageHeader title="Configurações" description="Sessões WhatsApp e parâmetros do tenant" />
 
@@ -170,7 +169,6 @@ const stateLabel = (state) => ({
                     </Card>
                 </Motion>
 
-            </div>
         </div>
     </AppLayout>
 </template>

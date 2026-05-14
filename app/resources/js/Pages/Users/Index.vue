@@ -114,8 +114,7 @@ onMounted(load);
 <template>
     <Head title="Usuários — Vora" />
     <AppLayout title="Usuários">
-        <div class="flex-1 overflow-y-auto scrollbar-thin">
-            <div class="px-8 py-8 max-w-[1400px]">
+        <div class="px-8 py-8 max-w-[1400px]">
                 <PageHeader title="Usuários" description="Atendentes, supervisores e administradores">
                     <template #actions>
                         <Button variant="outline" @click="openCreate">
@@ -207,7 +206,6 @@ onMounted(load);
                         </CardContent>
                     </Card>
                 </Motion>
-            </div>
         </div>
 
         <Dialog v-model:open="dialogOpen">

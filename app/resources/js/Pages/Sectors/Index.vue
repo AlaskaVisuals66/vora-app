@@ -26,8 +26,7 @@ onMounted(async () => {
 <template>
     <Head title="Setores — Vora" />
     <AppLayout title="Setores">
-        <div class="flex-1 overflow-y-auto scrollbar-thin">
-            <div class="px-8 py-8 max-w-[1400px]">
+        <div class="px-8 py-8 max-w-[1400px]">
                 <PageHeader title="Setores" description="Estrutura de atendimento e menu automatizado">
                     <template #actions>
                         <Button variant="default">
@@ -97,7 +96,6 @@ onMounted(async () => {
                         Criar primeiro setor
                     </Button>
                 </div>
-            </div>
         </div>
     </AppLayout>
 </template>
