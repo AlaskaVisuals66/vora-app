@@ -1,0 +1,53 @@
+{
+  "name": "Helpdesk · SLA breach",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "helpdesk/sla-breach",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook · sla.breach",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "helpdesk-sla-breach"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "severity", "value": "={{$json[\"data\"][\"first_response\"] ? 'first-response' : 'resolution'}}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-severity",
+      "name": "Classificar severidade",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#helpdesk-sla",
+        "text": "⚠️ *SLA estourado* ({{$json[\"severity\"]}})\nProtocolo: *#{{$json[\"data\"][\"protocol\"]}}*\nSetor: {{$json[\"data\"][\"sector\"]}}\nAtendente: {{$json[\"data\"][\"assignee\"] || 'sem atribuição'}}\nLimite: {{$json[\"data\"][\"limit_minutes\"]}}min · decorrido: {{$json[\"data\"][\"elapsed_minutes\"]}}min",
+        "otherOptions": {}
+      },
+      "id": "slack",
+      "name": "Slack #helpdesk-sla",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [680, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook · sla.breach": { "main": [[{ "node": "Classificar severidade", "type": "main", "index": 0 }]] },
+    "Classificar severidade": { "main": [[{ "node": "Slack #helpdesk-sla", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "helpdesk" }]
+}

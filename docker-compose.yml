@@ -1,0 +1,191 @@
+x-app-env: &app_env
+  APP_ENV: ${APP_ENV:-local}
+  APP_DEBUG: ${APP_DEBUG:-true}
+  APP_KEY: ${APP_KEY}
+  APP_URL: ${APP_URL:-http://localhost:8000}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: ${DB_DATABASE:-helpdesk}
+  DB_USERNAME: ${DB_USERNAME:-helpdesk}
+  DB_PASSWORD: ${DB_PASSWORD:-secret}
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+  QUEUE_CONNECTION: redis
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  BROADCAST_CONNECTION: pusher
+  PUSHER_APP_ID: ${PUSHER_APP_ID:-helpdesk}
+  PUSHER_APP_KEY: ${PUSHER_APP_KEY:-helpdeskkey}
+  PUSHER_APP_SECRET: ${PUSHER_APP_SECRET:-helpdesksecret}
+  PUSHER_HOST: soketi
+  PUSHER_PORT: 6001
+  PUSHER_SCHEME: http
+  PUSHER_APP_CLUSTER: mt1
+  EVOLUTION_API_URL: http://evolution:8080
+  EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-changeme}
+  N8N_BASE_URL: http://n8n:5678
+  N8N_API_TOKEN: ${N8N_API_TOKEN}
+  JWT_SECRET: ${JWT_SECRET}
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: helpdesk-nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./app:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks: [helpdesk]
+
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: helpdesk-php
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment: *app_env
+    volumes:
+      - ./app:/var/www/html
+    depends_on:
+      - postgres
+      - redis
+    networks: [helpdesk]
+
+  horizon:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: helpdesk-horizon
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment: *app_env
+    command: php artisan horizon
+    volumes:
+      - ./app:/var/www/html
+    depends_on:
+      - php
+      - redis
+    networks: [helpdesk]
+
+  scheduler:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: helpdesk-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment: *app_env
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    volumes:
+      - ./app:/var/www/html
+    depends_on:
+      - php
+    networks: [helpdesk]
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: helpdesk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-helpdesk}
+      POSTGRES_USER: ${DB_USERNAME:-helpdesk}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [helpdesk]
+
+  redis:
+    image: redis:7-alpine
+    container_name: helpdesk-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks: [helpdesk]
+
+  soketi:
+    image: quay.io/soketi/soketi:1.6-16-alpine
+    container_name: helpdesk-soketi
+    restart: unless-stopped
+    environment:
+      SOKETI_DEBUG: "0"
+      SOKETI_METRICS_SERVER_PORT: "9601"
+      SOKETI_DEFAULT_APP_ID: ${PUSHER_APP_ID:-helpdesk}
+      SOKETI_DEFAULT_APP_KEY: ${PUSHER_APP_KEY:-helpdeskkey}
+      SOKETI_DEFAULT_APP_SECRET: ${PUSHER_APP_SECRET:-helpdesksecret}
+      SOKETI_DEFAULT_APP_USER_AUTHENTICATION_TIMEOUT: "5000"
+    ports:
+      - "${SOKETI_PORT:-6001}:6001"
+      - "9601:9601"
+    networks: [helpdesk]
+
+  evolution:
+    image: atendai/evolution-api:latest
+    container_name: helpdesk-evolution
+    restart: unless-stopped
+    environment:
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-changeme}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${DB_USERNAME:-helpdesk}:${DB_PASSWORD:-secret}@postgres:5432/evolution?schema=public
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/2
+      CACHE_REDIS_PREFIX_KEY: evolution
+      WEBHOOK_GLOBAL_URL: http://nginx/api/v1/webhooks/evolution
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_EVENTS_MESSAGES_UPDATE: "true"
+      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
+      CONFIG_SESSION_PHONE_CLIENT: HelpDesk
+    ports:
+      - "${EVOLUTION_PORT:-8080}:8080"
+    depends_on: [postgres, redis]
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks: [helpdesk]
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: helpdesk-n8n
+    restart: unless-stopped
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: ${DB_USERNAME:-helpdesk}
+      DB_POSTGRESDB_PASSWORD: ${DB_PASSWORD:-secret}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      GENERIC_TIMEZONE: ${TZ:-America/Sao_Paulo}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-me-please}
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    depends_on: [postgres]
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/workflows:ro
+    networks: [helpdesk]
+
+volumes:
+  postgres_data:
+  redis_data:
+  evolution_instances:
+  n8n_data:
+
+networks:
+  helpdesk:
+    driver: bridge

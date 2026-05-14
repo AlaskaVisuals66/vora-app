@@ -1,0 +1,64 @@
+{
+  "name": "Helpdesk WhatsApp - Evolution Inbound",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evo-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "n-webhook",
+      "name": "Webhook Evolution",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "evo-incoming"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "loose"},
+          "conditions": [
+            {"leftValue": "={{$json.body.event}}", "rightValue": "messages.upsert", "operator": {"type": "string", "operation": "equals"}},
+            {"leftValue": "={{$json.body.data.key.fromMe}}", "rightValue": false, "operator": {"type": "boolean", "operation": "false"}}
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n-filter",
+      "name": "Mensagem recebida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body;\nconst phone = (b.data.key.remoteJid || '').split('@')[0];\nconst text = b.data.message?.conversation || b.data.message?.extendedTextMessage?.text || '';\nconst pushName = b.data.pushName || '';\nconst messageId = b.data.key.id || '';\nreturn [{json: {instance: b.instance, phone, pushName, text, messageId, raw: b}}];"
+      },
+      "id": "n-extract",
+      "name": "Extrai dados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {"respondWith": "text", "responseBody": "ok"},
+      "id": "n-resp",
+      "name": "200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [860, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Evolution": {"main": [[{"node": "Mensagem recebida?", "type": "main", "index": 0}]]},
+    "Mensagem recebida?": {"main": [[{"node": "Extrai dados", "type": "main", "index": 0}], [{"node": "200 OK", "type": "main", "index": 0}]]},
+    "Extrai dados": {"main": [[{"node": "200 OK", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "4",
+  "triggerCount": 1
+}

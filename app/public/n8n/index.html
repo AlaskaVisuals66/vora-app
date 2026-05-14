@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Workflows n8n — Helpdesk</title>
+<style>
+  body{font-family:system-ui,Segoe UI,sans-serif;max-width:780px;margin:40px auto;padding:0 20px;color:#111;background:#f8fafc}
+  h1{margin:0 0 8px}
+  p.lead{color:#475569;margin-top:0}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin:14px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .card h2{margin:0 0 6px;font-size:17px}
+  .card p{margin:0 0 10px;color:#475569;font-size:14px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:7px 12px;border-radius:8px;background:#4f46e5;color:#fff;text-decoration:none;font-size:13px;border:0;cursor:pointer}
+  .btn.ghost{background:#f1f5f9;color:#1e293b}
+  code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px}
+  ol{color:#334155;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>Workflows n8n — Helpdesk</h1>
+<p class="lead">Importe esses fluxos no seu n8n. Em cada card há um link direto pro JSON e um botão pra copiar a URL.</p>
+
+<div class="card">
+  <h2>1 · Auto-resposta fora do expediente</h2>
+  <p>Recebe webhook do Evolution e responde "fora do horário" entre 18h e 08h (BR).</p>
+  <div class="row">
+    <a class="btn" href="01-out-of-hours-autoreply.json" download>Baixar JSON</a>
+    <button class="btn ghost" onclick="copy('01-out-of-hours-autoreply.json')">Copiar link</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>2 · SLA Watchdog (Evolution)</h2>
+  <p>A cada 5 min checa se a instância <code>helpdesk-main</code> está conectada; se cair, tenta reconectar.</p>
+  <div class="row">
+    <a class="btn" href="02-sla-watchdog.json" download>Baixar JSON</a>
+    <button class="btn ghost" onclick="copy('02-sla-watchdog.json')">Copiar link</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>3 · CSAT após fechar ticket</h2>
+  <p>Webhook recebe <code>ticket.closed</code>, espera 30 min e envia pesquisa de satisfação 1-5 ao cliente.</p>
+  <div class="row">
+    <a class="btn" href="03-csat-on-close.json" download>Baixar JSON</a>
+    <button class="btn ghost" onclick="copy('03-csat-on-close.json')">Copiar link</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>4 · Resumo diário 18h</h2>
+  <p>Cron diário às 18h consulta o estado da instância e envia um resumo pro gestor.</p>
+  <div class="row">
+    <a class="btn" href="04-daily-digest.json" download>Baixar JSON</a>
+    <button class="btn ghost" onclick="copy('04-daily-digest.json')">Copiar link</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Como importar no n8n</h2>
+  <ol>
+    <li>Abra <code>https://projeto-n8n-n8n.8w2toq.easypanel.host</code>.</li>
+    <li>Clique em <b>Workflows → ⋯ → Import from File</b> e selecione o JSON baixado.<br>
+        (ou crie um workflow vazio, abra o menu <b>⋯ → Import from URL</b> e cole o link copiado.)</li>
+    <li>Clique em <b>Active</b> no canto superior direito.</li>
+    <li>Para fluxos com webhook (1 e 3), copie a URL gerada pelo nó <i>Webhook</i> e cole nos lugares indicados:<br>
+        — fluxo 1: como webhook adicional do Evolution.<br>
+        — fluxo 3: dispare via <code>POST</code> com body <code>{ "instance": "helpdesk-main", "client_phone": "5521...", "protocol": "HD-..." }</code>.</li>
+  </ol>
+</div>
+
+<script>
+function copy(file){
+  const url = location.origin + location.pathname.replace('index.html','') + file;
+  navigator.clipboard.writeText(url).then(()=>alert('Link copiado:\n'+url));
+}
+</script>
+</body>
+</html>

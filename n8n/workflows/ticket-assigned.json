@@ -1,0 +1,48 @@
+{
+  "name": "Helpdesk · Ticket atribuído",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "helpdesk/ticket-assigned",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook · ticket.assigned",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "helpdesk-ticket-assigned"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.HELPDESK_API_URL}}/v1/tickets/{{$json[\"data\"][\"ticket_id\"]}}/messages",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "Olá {{$json[\"data\"][\"client_name\"]}}, sou {{$json[\"data\"][\"attendant_name\"]}} do setor {{$json[\"data\"][\"sector\"]}}. Como posso ajudar?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "auto-greet",
+      "name": "Saudação automática",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook · ticket.assigned": { "main": [[{ "node": "Saudação automática", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "helpdesk" }]
+}

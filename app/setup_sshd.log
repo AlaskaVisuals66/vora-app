@@ -1,0 +1,52 @@
+﻿[12:31:53] script iniciado, PID=12420, user=Patrick, admin-context=True
+**********************
+Início da transcrição do Windows PowerShell
+Hora de início: 20260510123153
+Nome de Usuário: Patrick\Patrick
+Executar como Usuário: Patrick\Patrick
+Nome da Configuração: 
+Computador: PATRICK (Microsoft Windows NT 10.0.26200.0)
+Aplicativo Host: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File C:\Users\canal\Downloads\teste gerenciamento whatsapp\app\setup_sshd.ps1
+ID do Processo: 12420
+PSVersion: 5.1.26100.8115
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.8115
+BuildVersion: 10.0.26100.8115
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+==> Verificando OpenSSH Server
+   Estado atual: NotPresent
+==> Instalando OpenSSH Server...
+==> Iniciando servico sshd
+==> Configurando firewall (porta 22)
+   Regra ja existe.
+==> Detectando se canal e administrador
+   canal admin? False
+==> Usando arquivo do usuario: C:\Users\canal\.ssh\authorized_keys
+   Chave ja presente.
+==> Ajustando ACL do authorized_keys
+
+==> STATUS FINAL
+
+
+Name      : sshd
+Status    : Running
+StartType : Automatic
+
+
+Name      : sshd
+Enabled   : True
+Direction : Inbound
+Action    : Allow
+Arquivo de chaves: C:\Users\canal\.ssh\authorized_keys
+--- conteudo ---
+PS>TerminatingError(Get-Content): "O comando em execução parou porque a variável preferencial "ErrorActionPreference" ou o parâmetro comum está definido como Stop: O acesso ao caminho 'C:\Users\canal\.ssh\authorized_keys' foi negado."
+ERRO: O acesso ao caminho 'C:\Users\canal\.ssh\authorized_keys' foi negado.
+em <ScriptBlock>, C:\Users\canal\Downloads\teste gerenciamento whatsapp\app\setup_sshd.ps1: linha 90
+**********************
+Fim da transcrição do Windows PowerShell
+Hora de término: 20260510124220
+**********************

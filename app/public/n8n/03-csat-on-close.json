@@ -1,0 +1,62 @@
+{
+  "name": "Helpdesk - CSAT após fechar ticket",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket-closed",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "n-wh",
+      "name": "Webhook (ticket.closed)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "ticket-closed"
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "minutes"
+      },
+      "id": "n-wait",
+      "name": "Aguarda 30 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [460, 300],
+      "webhookId": "csat-wait"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://projeto-n8n-evolution-api.8w2toq.easypanel.host/message/sendText/{{$('Webhook (ticket.closed)').item.json.body.instance || 'helpdesk-main'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "y7Se2JIvspkCrmA7t38tQq8BJNsI0jWoqS3l6Q2r4WP"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{$('Webhook (ticket.closed)').item.json.body.client_phone}}\",\n  \"text\": \"Olá! 🙏 Como você avalia o atendimento do ticket {{$('Webhook (ticket.closed)').item.json.body.protocol}}?\\n\\nResponda com:\\n5 - Excelente ⭐⭐⭐⭐⭐\\n4 - Bom ⭐⭐⭐⭐\\n3 - Regular ⭐⭐⭐\\n2 - Ruim ⭐⭐\\n1 - Péssimo ⭐\",\n  \"options\": {\"delay\": 800, \"presence\": \"composing\"}\n}",
+        "options": {}
+      },
+      "id": "n-send",
+      "name": "Envia CSAT",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook (ticket.closed)": {"main": [[{"node": "Aguarda 30 min", "type": "main", "index": 0}]]},
+    "Aguarda 30 min": {"main": [[{"node": "Envia CSAT", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1",
+  "triggerCount": 1
+}

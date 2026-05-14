@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ngrok version *)",
+      "Bash(\"/c/Users/canal/Downloads/ngrok-v3-stable-windows-amd64/ngrok.exe\" http *)"
+    ]
+  }
+}

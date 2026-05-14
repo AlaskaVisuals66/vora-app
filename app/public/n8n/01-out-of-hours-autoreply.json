@@ -1,0 +1,119 @@
+{
+  "name": "WhatsApp - Auto-resposta fora do expediente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "evo-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "n-webhook",
+      "name": "Webhook (Evolution messages.upsert)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "evo-incoming"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "loose"},
+          "conditions": [
+            {
+              "leftValue": "={{$json.body.event}}",
+              "rightValue": "messages.upsert",
+              "operator": {"type": "string", "operation": "equals"}
+            },
+            {
+              "leftValue": "={{$json.body.data.key.fromMe}}",
+              "rightValue": false,
+              "operator": {"type": "boolean", "operation": "false"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n-filter",
+      "name": "Apenas mensagens recebidas",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst hourBR = (now.getUTCHours() - 3 + 24) % 24;\nconst inHours = hourBR >= 8 && hourBR < 18;\nreturn [{json: { ...$input.first().json.body, _hourBR: hourBR, _inHours: inHours }}];"
+      },
+      "id": "n-hours",
+      "name": "Calcula hora BR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "loose"},
+          "conditions": [
+            {
+              "leftValue": "={{$json._inHours}}",
+              "rightValue": false,
+              "operator": {"type": "boolean", "operation": "false"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "n-if-out",
+      "name": "Fora do expediente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://projeto-n8n-evolution-api.8w2toq.easypanel.host/message/sendText/{{$json.instance}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "y7Se2JIvspkCrmA7t38tQq8BJNsI0jWoqS3l6Q2r4WP"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{$json.data.key.remoteJid.split('@')[0]}}\",\n  \"text\": \"Olá! Estamos fora do horário de atendimento (08h às 18h, horário de Brasília). Sua mensagem foi registrada e responderemos no próximo expediente. ⏰\",\n  \"options\": {\"delay\": 800, \"presence\": \"composing\"}\n}",
+        "options": {}
+      },
+      "id": "n-send",
+      "name": "Envia auto-resposta (Evolution)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "ok"
+      },
+      "id": "n-resp",
+      "name": "200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook (Evolution messages.upsert)": {"main": [[{"node": "Apenas mensagens recebidas", "type": "main", "index": 0}]]},
+    "Apenas mensagens recebidas": {"main": [[{"node": "Calcula hora BR", "type": "main", "index": 0}], [{"node": "200 OK", "type": "main", "index": 0}]]},
+    "Calcula hora BR": {"main": [[{"node": "Fora do expediente?", "type": "main", "index": 0}]]},
+    "Fora do expediente?": {"main": [[{"node": "Envia auto-resposta (Evolution)", "type": "main", "index": 0}], [{"node": "200 OK", "type": "main", "index": 0}]]},
+    "Envia auto-resposta (Evolution)": {"main": [[{"node": "200 OK", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1",
+  "triggerCount": 1
+}

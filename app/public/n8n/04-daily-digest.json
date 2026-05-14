@@ -1,0 +1,77 @@
+{
+  "name": "Helpdesk - Resumo diário 18h",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "cronExpression"}]},
+        "triggerAtHour": 18,
+        "triggerAtMinute": 0
+      },
+      "id": "n-cron",
+      "name": "Diário 18h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://projeto-n8n-evolution-api.8w2toq.easypanel.host/instance/fetchInstances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "y7Se2JIvspkCrmA7t38tQq8BJNsI0jWoqS3l6Q2r4WP"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "n-fetch",
+      "name": "Lista instâncias",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inst = $input.first().json[0] || $input.first().json;\nconst summary = {\n  data: new Date().toISOString().slice(0,10),\n  instancia: inst?.name || inst?.instance?.instanceName || 'helpdesk-main',\n  estado: inst?.connectionStatus || inst?.instance?.state || 'desconhecido',\n  numero: inst?.ownerJid || inst?.instance?.owner || 'n/a'\n};\nreturn [{json: summary}];"
+      },
+      "id": "n-fmt",
+      "name": "Monta resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://projeto-n8n-evolution-api.8w2toq.easypanel.host/message/sendText/helpdesk-main",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "y7Se2JIvspkCrmA7t38tQq8BJNsI0jWoqS3l6Q2r4WP"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"5521982212296\",\n  \"text\": \"📊 Resumo Helpdesk {{$json.data}}\\n\\nInstância: {{$json.instancia}}\\nEstado: {{$json.estado}}\\nNúmero: {{$json.numero}}\",\n  \"options\": {\"delay\": 500}\n}",
+        "options": {}
+      },
+      "id": "n-send",
+      "name": "Envia para gestor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Diário 18h": {"main": [[{"node": "Lista instâncias", "type": "main", "index": 0}]]},
+    "Lista instâncias": {"main": [[{"node": "Monta resumo", "type": "main", "index": 0}]]},
+    "Monta resumo": {"main": [[{"node": "Envia para gestor", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1",
+  "triggerCount": 1
+}

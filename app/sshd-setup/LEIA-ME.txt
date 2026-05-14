@@ -1,0 +1,36 @@
+SSHD SETUP - Instalacao OpenSSH Server + chave autorizada
+===========================================================
+
+O QUE FAZ
+- Instala o OpenSSH Server do Windows (se ainda nao estiver).
+- Inicia o servico sshd e deixa em modo automatico.
+- Abre a porta 22 no firewall.
+- Adiciona a chave publica abaixo no arquivo correto
+  (administrators_authorized_keys se voce for admin,
+   ~/.ssh/authorized_keys caso contrario) e ajusta as ACLs.
+- Gera um log em setup_sshd.log na mesma pasta.
+
+CHAVE QUE SERA AUTORIZADA
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILG0tQBIxrUJcKjUjgpTwz0Dej/Y3v894nqmF15+u+sI root@245812fd92b8
+
+COMO RODAR
+1) Extraia este zip em qualquer pasta.
+2) Clique duplo em install.bat e aceite o UAC (botao SIM).
+   - Ou: clique direito em install.bat > Executar como administrador.
+   - Ou: abra PowerShell como admin, navegue ate a pasta e rode:
+        powershell -ExecutionPolicy Bypass -File .\setup_sshd.ps1
+
+3) Ao terminar, vai mostrar STATUS FINAL com o servico rodando
+   e o conteudo do arquivo de chaves. Ele indica como logar:
+        ssh <SEU_USUARIO>@<IP_DESTA_MAQUINA>
+
+DEPOIS
+- Para descobrir o IP local: ipconfig (procure IPv4).
+- Para testar do cliente que tem a chave privada:
+        ssh <usuario>@<ip>
+
+PROBLEMAS
+- Se o UAC nao aparecer, verifique se nao esta atras de outra janela.
+- Se der erro de execucao de scripts, abra PowerShell admin e rode:
+        Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+- Log completo: setup_sshd.log

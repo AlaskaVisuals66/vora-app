@@ -1,0 +1,6 @@
+Write-Host ('USERNAME=' + $env:USERNAME)
+Write-Host ('USERPROFILE=' + $env:USERPROFILE)
+Write-Host ('COMPUTERNAME=' + $env:COMPUTERNAME)
+$id = [Security.Principal.WindowsIdentity]::GetCurrent()
+Write-Host ('Identity.Name=' + $id.Name)
+Write-Host ('IsAdmin=' + ([Security.Principal.WindowsPrincipal]::new($id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)))

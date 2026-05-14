@@ -1,0 +1,93 @@
+{
+  "name": "Helpdesk · Ticket sem atendente disponível",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "helpdesk/ticket-queued-no-attendant",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook · ticket.queued",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "helpdesk-ticket-queued-no-attendant"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{$json[\"event\"]}}", "operation": "equals", "value2": "ticket.queued" }
+          ]
+        }
+      },
+      "id": "check-event",
+      "name": "Evento ticket.queued?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.HELPDESK_API_URL}}/v1/tickets/{{$json[\"data\"][\"ticket_id\"]}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "fetch-ticket",
+      "name": "Buscar contexto do ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "channel": "#helpdesk-alertas",
+        "text": "🚨 *Ticket sem atendente disponível*\nProtocolo: *#{{$json[\"data\"][\"protocol\"]}}*\nSetor: {{$json[\"data\"][\"sector\"]}}\nCliente: {{$json[\"data\"][\"client_name\"]}}\nAguardando há: {{$json[\"data\"][\"waiting_seconds\"]}}s",
+        "otherOptions": {}
+      },
+      "id": "slack-alert",
+      "name": "Alerta no Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [900, 220],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "fromEmail": "alertas@helpdesk.local",
+        "toEmail": "supervisao@empresa.com",
+        "subject": "Ticket #{{$json[\"data\"][\"protocol\"]}} sem atendente",
+        "text": "O ticket {{$json[\"data\"][\"protocol\"]}} do setor {{$json[\"data\"][\"sector\"]}} aguarda atribuição há mais de 60s.",
+        "options": {}
+      },
+      "id": "email-alert",
+      "name": "E-mail supervisão",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [900, 380],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook · ticket.queued": {
+      "main": [[{ "node": "Evento ticket.queued?", "type": "main", "index": 0 }]]
+    },
+    "Evento ticket.queued?": {
+      "main": [
+        [{ "node": "Buscar contexto do ticket", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Buscar contexto do ticket": {
+      "main": [[
+        { "node": "Alerta no Slack", "type": "main", "index": 0 },
+        { "node": "E-mail supervisão", "type": "main", "index": 0 }
+      ]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "helpdesk" }]
+}

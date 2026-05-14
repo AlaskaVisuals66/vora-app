@@ -1,0 +1,37 @@
+{
+  "name": "Helpdesk · Ticket transferido",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "helpdesk/ticket-transferred",
+        "options": {}
+      },
+      "id": "webhook-in",
+      "name": "Webhook · ticket.transferred",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "helpdesk-ticket-transferred"
+    },
+    {
+      "parameters": {
+        "channel": "#helpdesk-transferencias",
+        "text": "🔄 Ticket *#{{$json[\"data\"][\"protocol\"]}}* transferido\nDe: {{$json[\"data\"][\"from\"]}}\nPara: {{$json[\"data\"][\"to\"]}}\nMotivo: {{$json[\"data\"][\"reason\"] || '—'}}",
+        "otherOptions": {}
+      },
+      "id": "slack",
+      "name": "Notificar Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [460, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook · ticket.transferred": { "main": [[{ "node": "Notificar Slack", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "helpdesk" }]
+}

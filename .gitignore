@@ -1,0 +1,14 @@
+/app/node_modules
+/app/vendor
+/app/public/build
+/app/public/hot
+/app/storage/*.key
+/app/storage/logs/*
+/app/storage/framework/cache/*
+/app/storage/framework/sessions/*
+/app/storage/framework/views/*
+/app/.env
+/app/database/database.sqlite
+.superpowers/
+ngrok.log
+n8n_cookies.txt
