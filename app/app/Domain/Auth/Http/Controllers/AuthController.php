@@ -68,6 +68,33 @@ class AuthController extends Controller
         return response()->json(['message' => 'Sessão encerrada']);
     }
 
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name'             => ['required','string','max:120'],
+            'phone'            => ['nullable','string','max:32'],
+            'current_password' => ['nullable','string'],
+            'password'         => ['nullable','string','min:8','confirmed'],
+        ]);
+
+        if (! empty($data['password'])) {
+            if (empty($data['current_password']) || ! Hash::check($data['current_password'], $user->password)) {
+                return response()->json(['message' => 'Senha atual incorreta.'], 422);
+            }
+            $user->password = Hash::make($data['password']);
+        }
+
+        $user->name  = $data['name'];
+        $user->phone = $data['phone'] ?? null;
+        $user->save();
+
+        $this->audit->log($user, 'profile.updated', $request);
+
+        return response()->json(['user' => $user->fresh()->load(['roles','sectors'])]);
+    }
+
     private function respondWithToken(string $token, User $user): JsonResponse
     {
         return response()->json([

@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { router } from '@inertiajs/vue3';
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem,
     DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -31,7 +32,7 @@ const initials = computed(() => {
                 <div class="text-[12px] font-normal text-muted-foreground">{{ user?.email }}</div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem @click="router.visit('/profile')">
                 <UserIcon class="mr-2 h-4 w-4" /> Perfil
             </DropdownMenuItem>
             <DropdownMenuSeparator />
