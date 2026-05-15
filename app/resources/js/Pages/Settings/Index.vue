@@ -12,7 +12,10 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/Components/ui/avatar';
 import { onMounted, ref, computed } from 'vue';
 import axios from 'axios';
 import { toast } from 'vue-sonner';
-import { Plus, QrCode, RefreshCw, Trash2, Smartphone, CheckCircle2, Building2, Plug } from 'lucide-vue-next';
+import { Plus, QrCode, RefreshCw, Trash2, Smartphone, CheckCircle2, Building2 } from 'lucide-vue-next';
+import SectorAiSettings from '@/Components/vora/SectorAiSettings.vue';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import { Textarea } from '@/Components/ui/textarea';
 
 /* ---------- WhatsApp sessions ---------- */
 const sessions = ref([]);
@@ -73,6 +76,8 @@ const tenantForm = ref({
     address: emptyAddress(), logo_url: null,
 });
 const integrations = ref(null);
+const gateway = ref({ type: 'evolution', config: {} });
+const gatewaySaving = ref(false);
 const tenantSaving = ref(false);
 const tenantError = ref(null);
 const logoUploading = ref(false);
@@ -102,6 +107,9 @@ async function loadTenant() {
         const { data } = await axios.get('/api/v1/tenant');
         applyTenant(data.data.tenant);
         integrations.value = data.data.integrations;
+        if (data.data.integrations?.gateway) {
+            gateway.value = data.data.integrations.gateway;
+        }
     } catch (_) {}
 }
 
@@ -122,6 +130,19 @@ async function saveTenant() {
         tenantError.value = e.response?.data?.message || 'Falha ao salvar os dados da empresa.';
     } finally {
         tenantSaving.value = false;
+    }
+}
+
+async function saveGateway() {
+    gatewaySaving.value = true;
+    try {
+        const { data } = await axios.put('/api/v1/tenant/gateway', gateway.value);
+        if (data.data.integrations?.gateway) gateway.value = data.data.integrations.gateway;
+        toast.success('Gateway atualizado');
+    } catch {
+        toast.error('Falha ao salvar gateway');
+    } finally {
+        gatewaySaving.value = false;
     }
 }
 
@@ -358,43 +379,105 @@ onMounted(() => { load(); loadTenant(); });
                     </TabsContent>
 
                     <!-- ===== Integrações ===== -->
-                    <TabsContent value="integrations">
+                    <TabsContent value="integrations" class="space-y-4">
+
+                        <!-- Gateway de Mensagens -->
                         <Card>
                             <CardHeader>
-                                <CardTitle>Evolution API</CardTitle>
+                                <CardTitle>Gateway de Mensagens</CardTitle>
                                 <CardDescription>
-                                    Conexão com o gateway WhatsApp. Configurada no servidor — somente leitura.
+                                    Selecione e configure o provedor de envio de mensagens WhatsApp.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <dl class="divide-y divide-border border border-border rounded-lg overflow-hidden">
-                                    <div class="flex items-center justify-between gap-4 px-4 py-3">
-                                        <dt class="text-[12.5px] text-muted-foreground">Endpoint</dt>
-                                        <dd class="font-mono text-[12.5px] text-foreground truncate">
-                                            {{ integrations?.evolution?.url || '—' }}
-                                        </dd>
+                                <div class="space-y-4 max-w-xl">
+                                    <div class="space-y-1.5">
+                                        <label class="text-[12px] font-medium text-foreground">Tipo</label>
+                                        <Select v-model="gateway.type">
+                                            <SelectTrigger class="w-full">
+                                                <SelectValue placeholder="Selecione o gateway" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="evolution">Evolution API</SelectItem>
+                                                <SelectItem value="webhook">Webhook Genérico</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <div class="flex items-center justify-between gap-4 px-4 py-3">
-                                        <dt class="text-[12.5px] text-muted-foreground">Chave de API</dt>
-                                        <dd>
-                                            <Badge :variant="integrations?.evolution?.api_key_set ? 'default' : 'outline'">
-                                                {{ integrations?.evolution?.api_key_set ? 'Configurada' : 'Não configurada' }}
-                                            </Badge>
-                                        </dd>
+
+                                    <!-- Evolution: read-only -->
+                                    <template v-if="gateway.type === 'evolution'">
+                                        <dl class="divide-y divide-border border border-border rounded-lg overflow-hidden">
+                                            <div class="flex items-center justify-between gap-4 px-4 py-3">
+                                                <dt class="text-[12.5px] text-muted-foreground">Endpoint</dt>
+                                                <dd class="font-mono text-[12.5px] text-foreground truncate">
+                                                    {{ integrations?.evolution?.url || '—' }}
+                                                </dd>
+                                            </div>
+                                            <div class="flex items-center justify-between gap-4 px-4 py-3">
+                                                <dt class="text-[12.5px] text-muted-foreground">Chave de API</dt>
+                                                <dd>
+                                                    <Badge :variant="integrations?.evolution?.api_key_set ? 'default' : 'outline'">
+                                                        {{ integrations?.evolution?.api_key_set ? 'Configurada' : 'Não configurada' }}
+                                                    </Badge>
+                                                </dd>
+                                            </div>
+                                            <div class="flex items-center justify-between gap-4 px-4 py-3">
+                                                <dt class="text-[12.5px] text-muted-foreground">Webhook</dt>
+                                                <dd class="font-mono text-[12.5px] text-foreground truncate">
+                                                    {{ integrations?.evolution?.webhook_url || '—' }}
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </template>
+
+                                    <!-- Generic webhook: editable -->
+                                    <template v-else>
+                                        <div class="space-y-3">
+                                            <div class="space-y-1.5">
+                                                <label class="text-[12px] font-medium text-foreground">URL de envio</label>
+                                                <Input v-model="gateway.config.url" placeholder="https://gateway.example.com/send" />
+                                            </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div class="space-y-1.5">
+                                                    <label class="text-[12px] font-medium text-foreground">Header secreto</label>
+                                                    <Input v-model="gateway.config.secret_header" placeholder="X-Secret" />
+                                                </div>
+                                                <div class="space-y-1.5">
+                                                    <label class="text-[12px] font-medium text-foreground">Valor do header</label>
+                                                    <Input v-model="gateway.config.secret_value" placeholder="meu-secret" type="password" />
+                                                </div>
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-[12px] font-medium text-foreground">Mapeamento de eventos (JSON)</label>
+                                                <Textarea v-model="gateway.config.event_mapping"
+                                                          placeholder='{"MESSAGE_RECEIVED": "message.upsert"}'
+                                                          class="font-mono text-[12px] min-h-[80px]" />
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <div class="flex justify-end">
+                                        <Button variant="default" :disabled="gatewaySaving" @click="saveGateway">
+                                            {{ gatewaySaving ? 'Salvando…' : 'Salvar gateway' }}
+                                        </Button>
                                     </div>
-                                    <div class="flex items-center justify-between gap-4 px-4 py-3">
-                                        <dt class="text-[12.5px] text-muted-foreground">Webhook</dt>
-                                        <dd class="font-mono text-[12.5px] text-foreground truncate">
-                                            {{ integrations?.evolution?.webhook_url || '—' }}
-                                        </dd>
-                                    </div>
-                                </dl>
-                                <p class="text-[11.5px] text-muted-foreground mt-3 flex items-center gap-1.5">
-                                    <Plug class="h-3.5 w-3.5" />
-                                    Para conectar números, use a aba WhatsApp.
-                                </p>
+                                </div>
                             </CardContent>
                         </Card>
+
+                        <!-- n8n por Setor -->
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>n8n por Setor</CardTitle>
+                                <CardDescription>
+                                    Configure o bot de IA e ações n8n para cada setor.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <SectorAiSettings />
+                            </CardContent>
+                        </Card>
+
                     </TabsContent>
                 </Tabs>
             </Motion>
