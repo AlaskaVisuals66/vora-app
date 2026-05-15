@@ -69,6 +69,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('tenant', [TenantController::class, 'show']);
             Route::put('tenant', [TenantController::class, 'update']);
+            Route::put('tenant/gateway', [TenantController::class, 'updateGateway']);
             Route::post('tenant/logo', [TenantController::class, 'uploadLogo']);
         });
     });

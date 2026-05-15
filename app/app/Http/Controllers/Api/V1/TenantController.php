@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class TenantController extends Controller
 {
@@ -32,6 +33,7 @@ class TenantController extends Controller
                         'api_key_set' => filled(config('services.evolution.api_key')),
                         'webhook_url' => url('/api/v1/webhooks/evolution'),
                     ],
+                    'gateway' => $settings['gateway'] ?? ['type' => 'evolution', 'config' => []],
                 ],
             ],
         ]);
@@ -98,6 +100,27 @@ class TenantController extends Controller
 
         $settings['logo'] = $path;
         $tenant->settings = $settings;
+        $tenant->save();
+
+        return $this->show($request);
+    }
+
+    public function updateGateway(Request $request): JsonResponse
+    {
+        $tenant = $request->user()->tenant;
+
+        $data = $request->validate([
+            'type'                 => ['required', Rule::in(['evolution', 'webhook'])],
+            'config'               => ['nullable', 'array'],
+            'config.url'           => ['nullable', 'string', 'max:255'],
+            'config.secret_header' => ['nullable', 'string', 'max:64'],
+            'config.secret_value'  => ['nullable', 'string', 'max:255'],
+            'config.event_mapping' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $settings            = $tenant->settings ?? [];
+        $settings['gateway'] = $data;
+        $tenant->settings    = $settings;
         $tenant->save();
 
         return $this->show($request);
