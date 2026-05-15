@@ -34,5 +34,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $attendant->syncPermissions([
             'tickets.view.own', 'tickets.send', 'tickets.transfer', 'tickets.close',
         ]);
+
+        $superadmin = Role::findOrCreate('superadmin', 'api');
+        $superadmin->syncPermissions(Permission::all());
     }
 }
