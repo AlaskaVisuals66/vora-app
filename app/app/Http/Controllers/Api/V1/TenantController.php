@@ -14,6 +14,9 @@ class TenantController extends Controller
     {
         $tenant   = $request->user()->tenant;
         $settings = $tenant->settings ?? [];
+        $gateway  = $this->gatewayShape($settings['gateway'] ?? null);
+        $evolutionConfig = $gateway['type'] === 'evolution' ? $gateway['config'] : [];
+        $evolutionApiKey = $evolutionConfig['api_key'] ?? config('services.evolution.api_key');
 
         return response()->json([
             'data' => [
@@ -29,11 +32,11 @@ class TenantController extends Controller
                 ],
                 'integrations' => [
                     'evolution' => [
-                        'url'         => (string) config('services.evolution.url'),
-                        'api_key_set' => filled(config('services.evolution.api_key')),
-                        'webhook_url' => url('/api/v1/webhooks/evolution'),
+                        'url'         => $evolutionConfig['base_url'] ?? (string) config('services.evolution.url'),
+                        'api_key_set' => filled($evolutionApiKey),
+                        'webhook_url' => $evolutionConfig['webhook_url'] ?? url('/api/v1/webhooks/evolution'),
                     ],
-                    'gateway' => $settings['gateway'] ?? ['type' => 'evolution', 'config' => []],
+                    'gateway' => $this->publicGatewayShape($gateway),
                 ],
             ],
         ]);
@@ -105,6 +108,59 @@ class TenantController extends Controller
         return $this->show($request);
     }
 
+    public function getBotConfig(Request $request): JsonResponse
+    {
+        $tenant = $request->user()->tenant;
+        $settings = $tenant->settings ?? [];
+        return response()->json(['data' => $this->botConfigShape($settings['bot'] ?? null)]);
+    }
+
+    public function updateBot(Request $request): JsonResponse
+    {
+        $tenant = $request->user()->tenant;
+
+        $data = $request->validate([
+            'enabled'          => ['boolean'],
+            'menu_message'     => ['nullable', 'string', 'max:2000'],
+            'confirm_message'  => ['nullable', 'string', 'max:1000'],
+            'invalid_message'  => ['nullable', 'string', 'max:500'],
+            'delay_seconds'    => ['nullable', 'integer', 'min:0', 'max:10'],
+            'sectors'          => ['nullable', 'array', 'max:10'],
+            'sectors.*.key'    => ['required_with:sectors', 'string', 'max:8'],
+            'sectors.*.label'  => ['required_with:sectors', 'string', 'max:64'],
+            'sectors.*.emoji'  => ['nullable', 'string', 'max:8'],
+            'sectors.*.state'  => ['required_with:sectors', 'string', 'max:32'],
+        ]);
+
+        $settings = $tenant->settings ?? [];
+        $current  = $this->botConfigShape($settings['bot'] ?? null);
+
+        $settings['bot'] = array_merge($current, array_filter($data, fn ($v) => ! is_null($v)));
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        return response()->json(['data' => $this->botConfigShape($settings['bot'])]);
+    }
+
+    private function botConfigShape(?array $bot): array
+    {
+        $defaults = [
+            'enabled'         => false,
+            'menu_message'    => "Olá, {name}! 👋 Bem-vindo(a) ao atendimento.\n\nEscolha um setor:\n\n{sectors}\n\nDigite o número.",
+            'confirm_message' => "✅ Seu atendimento foi direcionado!\n\nAguarde, em breve um atendente entrará em contato.\n\nSe quiser, descreva sua dúvida enquanto aguarda.",
+            'invalid_message' => "❌ Opção inválida. Digite o número:\n\n{sectors}",
+            'delay_seconds'   => 1,
+            'sectors'         => [
+                ['key' => '1', 'label' => 'Financeiro',     'emoji' => '💰', 'state' => 'financial'],
+                ['key' => '2', 'label' => 'Suporte Técnico','emoji' => '🔧', 'state' => 'support'],
+                ['key' => '3', 'label' => 'Vendas',         'emoji' => '🛒', 'state' => 'sales'],
+                ['key' => '4', 'label' => 'Agendamento',    'emoji' => '📅', 'state' => 'scheduling'],
+            ],
+        ];
+
+        return array_merge($defaults, is_array($bot) ? $bot : []);
+    }
+
     public function updateGateway(Request $request): JsonResponse
     {
         $tenant = $request->user()->tenant;
@@ -112,6 +168,10 @@ class TenantController extends Controller
         $data = $request->validate([
             'type'                 => ['required', Rule::in(['evolution', 'webhook'])],
             'config'               => ['nullable', 'array'],
+            'config.base_url'      => ['nullable', 'url', 'max:255'],
+            'config.api_key'       => ['nullable', 'string', 'max:255'],
+            'config.webhook_url'   => ['nullable', 'url', 'max:255'],
+            'config.webhook_events'=> ['nullable', 'string', 'max:2000'],
             'config.url'           => ['nullable', 'string', 'max:255'],
             'config.secret_header' => ['nullable', 'string', 'max:64'],
             'config.secret_value'  => ['nullable', 'string', 'max:255'],
@@ -119,10 +179,59 @@ class TenantController extends Controller
         ]);
 
         $settings            = $tenant->settings ?? [];
-        $settings['gateway'] = $data;
+        $currentGateway      = $this->gatewayShape($settings['gateway'] ?? null);
+        $nextGateway         = $this->gatewayShape($data);
+
+        if (
+            $nextGateway['type'] === 'evolution'
+            && blank($nextGateway['config']['api_key'] ?? null)
+            && filled($currentGateway['config']['api_key'] ?? null)
+        ) {
+            $nextGateway['config']['api_key'] = $currentGateway['config']['api_key'];
+        }
+
+        $settings['gateway'] = $nextGateway;
         $tenant->settings    = $settings;
         $tenant->save();
 
         return $this->show($request);
+    }
+
+    private function gatewayShape($gateway): array
+    {
+        $gateway = is_array($gateway) ? $gateway : [];
+        $type = in_array($gateway['type'] ?? null, ['evolution', 'webhook'], true) ? $gateway['type'] : 'evolution';
+        $config = is_array($gateway['config'] ?? null) ? $gateway['config'] : [];
+
+        if ($type === 'evolution') {
+            return [
+                'type' => 'evolution',
+                'config' => [
+                    'base_url' => filled($config['base_url'] ?? null) ? $config['base_url'] : (string) config('services.evolution.url'),
+                    'api_key' => $config['api_key'] ?? null,
+                    'webhook_url' => filled($config['webhook_url'] ?? null) ? $config['webhook_url'] : url('/api/v1/webhooks/evolution'),
+                    'webhook_events' => filled($config['webhook_events'] ?? null) ? $config['webhook_events'] : 'MESSAGES_UPSERT, MESSAGES_UPDATE, CONNECTION_UPDATE, QRCODE_UPDATED',
+                ],
+            ];
+        }
+
+        return [
+            'type' => 'webhook',
+            'config' => [
+                'url' => $config['url'] ?? '',
+                'secret_header' => $config['secret_header'] ?? '',
+                'secret_value' => $config['secret_value'] ?? '',
+                'event_mapping' => $config['event_mapping'] ?? '',
+            ],
+        ];
+    }
+
+    private function publicGatewayShape(array $gateway): array
+    {
+        if ($gateway['type'] === 'evolution') {
+            unset($gateway['config']['api_key']);
+        }
+
+        return $gateway;
     }
 }

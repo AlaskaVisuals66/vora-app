@@ -57,6 +57,7 @@ class TicketController extends Controller
 
         $messages = $ticket->messages()
             ->with(['attachments','sender:id,name'])
+            ->orderBy('sent_at')
             ->orderBy('id')
             ->paginate(50);
 

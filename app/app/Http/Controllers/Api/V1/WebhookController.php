@@ -5,10 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessIncomingWhatsappEvent;
-use Illuminate\Http\Client\Pool;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
@@ -17,12 +15,6 @@ class WebhookController extends Controller
     {
         $payload = $request->all();
         Log::channel('webhooks')->info('evolution.webhook', ['event' => $payload['event'] ?? null]);
-
-        if ($url = env('N8N_FORWARD_URL')) {
-            try { Http::timeout(2)->post($url, $payload); } catch (\Throwable $e) {
-                Log::channel('webhooks')->warning('n8n.forward.failed', ['err' => $e->getMessage()]);
-            }
-        }
 
         $event    = (string) ($payload['event'] ?? '');
         $instance = (string) ($payload['instance'] ?? '');
@@ -35,30 +27,44 @@ class WebhookController extends Controller
                 'close'   => 'disconnected',
                 'connecting' => 'connecting',
             ];
-            WhatsappSession::updateOrCreate(
-                ['instance_name' => $instance],
-                [
-                    'tenant_id'     => 1,
-                    'display_name'  => $instance,
-                    'state'         => $map[$state] ?? 'error',
-                    'connected_at'  => $state === 'open' ? now() : null,
-                    'last_event_at' => now(),
-                ],
-            );
+            $session = WhatsappSession::where('instance_name', $instance)->first();
+            if (! $session) {
+                Log::channel('webhooks')->warning('evolution.unknown_instance', ['instance' => $instance]);
+                return response()->json(['ok' => true]);
+            }
+
+            $mappedState = $map[$state] ?? null;
+            if (! $mappedState) {
+                return response()->json(['ok' => true]);
+            }
+
+            $session->forceFill([
+                'state'         => $mappedState,
+                'connected_at'  => $mappedState === 'connected' ? ($session->connected_at ?: now()) : null,
+                'last_event_at' => now(),
+                'qr_code'       => $mappedState === 'connected' ? null : $session->qr_code,
+            ])->save();
+
             return response()->json(['ok' => true]);
         }
 
         if ($event === 'qrcode.updated' && $instance) {
-            WhatsappSession::updateOrCreate(
-                ['instance_name' => $instance],
-                [
-                    'tenant_id'     => 1,
-                    'display_name'  => $instance,
-                    'state'         => 'qr_pending',
-                    'qr_code'       => $payload['data']['qrcode']['base64'] ?? $payload['data']['qrcode'] ?? null,
-                    'last_event_at' => now(),
-                ],
-            );
+            $session = WhatsappSession::where('instance_name', $instance)->first();
+            if (! $session) {
+                Log::channel('webhooks')->warning('evolution.unknown_qr_instance', ['instance' => $instance]);
+                return response()->json(['ok' => true]);
+            }
+
+            $session->forceFill([
+                'state'         => 'qr_pending',
+                'qr_code'       => $payload['data']['qrcode']['base64']
+                    ?? $payload['data']['qrcode']
+                    ?? $payload['data']['base64']
+                    ?? $payload['data']['code']
+                    ?? null,
+                'last_event_at' => now(),
+            ])->save();
+
             return response()->json(['ok' => true]);
         }
 

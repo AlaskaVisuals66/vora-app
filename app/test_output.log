@@ -1,0 +1,26 @@
+
+  [30;42;1m PASS [39;49;22m[39m Tests\Feature\GatewaySettingsTest[39m
+  [32;1m✓[39;22m[90m [39m[90mit admin can save webhook gateway settings[39m[90m                                                                  [39m [90m0.93s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit admin can switch back to evolution gateway[39m[90m                                                               [39m [90m0.11s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit gateway is returned in tenant show response[39m[90m                                                              [39m [90m0.10s[39m  
+
+  [30;42;1m PASS [39;49;22m[39m Tests\Feature\SectorAiSettingsTest[39m
+  [32;1m✓[39;22m[90m [39m[90mit admin can update sector ai_settings[39m[90m                                                                      [39m [90m0.11s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit attendant cannot update sector ai_settings[39m[90m                                                               [39m [90m0.09s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit sector index includes ai_settings[39m[90m                                                                        [39m [90m0.09s[39m  
+
+  [30;42;1m PASS [39;49;22m[39m Tests\Feature\UserVisibilityTest[39m
+  [32;1m✓[39;22m[90m [39m[90mit admin sees all tenant users but not superadmin[39m[90m                                                           [39m [90m0.12s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit attendant sees only users in shared sectors[39m[90m                                                              [39m [90m0.10s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit attendant from a different tenant cannot see users[39m[90m                                                       [39m [90m0.10s[39m  
+
+  [30;42;1m PASS [39;49;22m[39m Tests\Feature\WhatsappSessionQuotaTest[39m
+  [32;1m✓[39;22m[90m [39m[90mit admin can create a session[39m[90m                                                                               [39m [90m0.13s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit setting a session as primary unsets previous primary[39m[90m                                                     [39m [90m0.09s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit rejects creation when max_sessions reached[39m[90m                                                               [39m [90m0.10s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit attendant can create a non-primary session[39m[90m                                                               [39m [90m0.11s[39m  
+  [32;1m✓[39;22m[90m [39m[90mit attendant cannot delete a session[39m[90m                                                                        [39m [90m0.10s[39m  
+
+  [90mTests:[39m    [32;1m14 passed[39;22m[90m (31 assertions)[39m
+  [90mDuration:[39m [39m2.70s[39m
+

@@ -76,8 +76,8 @@ When a message arrives on a sector with `ai_enabled = true`, `ConversationOrches
 ### 1 primary session per tenant
 
 `whatsapp_sessions.is_primary` already exists. Add:
-- DB: unique partial index `CREATE UNIQUE INDEX idx_one_primary_per_tenant ON whatsapp_sessions (tenant_id) WHERE is_primary = true` (PostgreSQL/MySQL conditional index)
-- Application: when creating a session and `is_primary = true`, unset any existing primary first (transaction)
+- Application-level enforcement (DB is SQLite): inside a transaction, `UPDATE whatsapp_sessions SET is_primary = 0 WHERE tenant_id = ? AND id != ?` before setting the new primary. No migration index needed.
+- Optional: `DB::statement('CREATE UNIQUE INDEX IF NOT EXISTS ...')` in a migration for SQLite partial index support.
 
 ### Session quota
 

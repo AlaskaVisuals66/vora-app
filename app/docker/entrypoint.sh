@@ -6,16 +6,6 @@ cd /var/www/html
 # Allow overriding the run mode via env (preferred when CMD args are awkward to set)
 MODE="${SERVICE_MODE:-${1:-web}}"
 
-# Ensure SQLite file exists when DB_CONNECTION=sqlite (default for this app)
-if [ "${DB_CONNECTION:-sqlite}" = "sqlite" ]; then
-    DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
-    mkdir -p "$(dirname "$DB_PATH")"
-    if [ ! -f "$DB_PATH" ]; then
-        touch "$DB_PATH"
-    fi
-    chown www-data:www-data "$DB_PATH"
-fi
-
 # Make sure writable directories belong to www-data (covers volume-mounted dirs)
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database 2>/dev/null || true
 
@@ -35,11 +25,11 @@ if [ "$MODE" = "web" ] && [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
 fi
 
 # One-shot seed on first boot (creates default tenant, roles, users)
-SEED_LOCK="/var/www/html/database/.seeded"
-if [ "$MODE" = "web" ] && [ "${RUN_SEED:-true}" = "true" ] && [ ! -f "$SEED_LOCK" ]; then
-    if php artisan db:seed --force --class=DatabaseSeeder; then
-        touch "$SEED_LOCK"
-        chown www-data:www-data "$SEED_LOCK" 2>/dev/null || true
+# Uses a DB flag so it survives container restarts without a persistent volume.
+if [ "$MODE" = "web" ] && [ "${RUN_SEED:-true}" = "true" ]; then
+    SEEDED=$(php artisan tinker --no-interaction --execute="echo \DB::table('users')->exists() ? '1' : '0';" 2>/dev/null | tail -1 || echo "0")
+    if [ "$SEEDED" != "1" ]; then
+        php artisan db:seed --force --class=DatabaseSeeder || true
     fi
 fi
 

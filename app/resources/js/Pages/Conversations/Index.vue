@@ -13,7 +13,7 @@ import { Textarea } from '@/Components/ui/textarea';
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
-import { Search, Send, MessagesSquare, Paperclip, Smile } from 'lucide-vue-next';
+import { Search, Send, MessagesSquare, Paperclip, Smile, Inbox, SlidersHorizontal, Check } from 'lucide-vue-next';
 import axios from 'axios';
 
 const props = defineProps({
@@ -24,12 +24,14 @@ const page = usePage();
 const store = useConversationsStore();
 const { user } = useAuth();
 const currentSector = ref(null);
+const sectors = ref([]);
 
 const draft = ref('');
 const messageScroll = ref(null);
 const tenantChannel = ref(null);
 const ticketChannel = ref(null);
 const typingTimer = ref(null);
+const filterOpen = ref(false);
 
 const filtered = computed(() => {
     if (!store.filters.search) return store.tickets;
@@ -49,6 +51,16 @@ const statusOptions = [
     { value: 'pending', label: 'Aguardando' },
     { value: 'closed',  label: 'Encerrados' },
 ];
+
+const currentStatusLabel = computed(() =>
+    statusOptions.find(s => s.value === store.filters.status)?.label ?? 'Todos',
+);
+
+function setStatus(value) {
+    store.filters.status = value;
+    filterOpen.value = false;
+    store.fetchTickets();
+}
 
 const statusVariant = computed(() => ({
     queued: 'secondary', open: 'default', pending: 'default',
@@ -118,21 +130,30 @@ function subscribeTicket(id) {
 
 watch(() => store.messages.length, () => scrollToBottom());
 
+async function loadSectors() {
+    try {
+        const { data } = await axios.get('/api/v1/sectors');
+        sectors.value = data.data || [];
+    } catch (_) {}
+}
+
+function selectSector(sector) {
+    currentSector.value = sector || null;
+    store.filters.sector_id = sector ? sector.id : null;
+    const path = sector ? `/conversations/sector/${sector.slug}` : '/conversations';
+    history.replaceState(null, '', path);
+    store.fetchTickets();
+}
+
 async function resolveSectorFromSlug() {
     if (!props.sectorSlug) {
         store.filters.sector_id = null;
         currentSector.value = null;
         return;
     }
-    try {
-        const { data } = await axios.get('/api/v1/sectors');
-        const list = data.data || [];
-        const match = list.find(s => s.slug === props.sectorSlug);
-        currentSector.value = match || null;
-        store.filters.sector_id = match ? match.id : null;
-    } catch (_) {
-        store.filters.sector_id = null;
-    }
+    const match = sectors.value.find(s => s.slug === props.sectorSlug);
+    currentSector.value = match || null;
+    store.filters.sector_id = match ? match.id : null;
 }
 
 watch(() => props.sectorSlug, async () => {
@@ -142,6 +163,7 @@ watch(() => props.sectorSlug, async () => {
 
 onMounted(async () => {
     subscribeTenant();
+    await loadSectors();
     await resolveSectorFromSlug();
     await store.fetchTickets();
     if (props.ticketId) await selectTicket(Number(props.ticketId));
@@ -160,35 +182,100 @@ onBeforeUnmount(() => {
     <AppLayout>
         <div class="flex h-full overflow-hidden">
 
+            <!-- Coluna de setores -->
+            <aside class="flex w-[200px] shrink-0 flex-col border-r border-border bg-card">
+                <div class="flex h-14 shrink-0 items-center border-b border-border px-4">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Setores</span>
+                </div>
+                <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
+                    <!-- Todos -->
+                    <button
+                        @click="selectSector(null)"
+                        class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] font-medium transition-colors"
+                        :class="!currentSector
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'"
+                    >
+                        <Inbox class="h-4 w-4 shrink-0" />
+                        <span class="truncate">Todos</span>
+                    </button>
+
+                    <!-- Setores -->
+                    <button
+                        v-for="s in sectors"
+                        :key="s.id"
+                        @click="selectSector(s)"
+                        class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] font-medium transition-colors"
+                        :class="currentSector?.id === s.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'"
+                    >
+                        <span class="h-2 w-2 shrink-0 rounded-full"
+                              :style="{ backgroundColor: s.color || '#64748b' }" />
+                        <span class="flex-1 truncate">{{ s.name }}</span>
+                        <span v-if="s.open_tickets > 0"
+                              class="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none"
+                              :class="currentSector?.id === s.id ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'">
+                            {{ s.open_tickets }}
+                        </span>
+                    </button>
+
+                    <div v-if="!sectors.length"
+                         class="px-3 py-4 text-[12px] text-muted-foreground text-center">
+                        Nenhum setor
+                    </div>
+                </nav>
+            </aside>
+
             <!-- Lista de tickets -->
-            <section class="w-[340px] border-r border-border bg-card flex flex-col">
-                <div class="px-5 pt-5 pb-4 border-b border-border">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span v-if="currentSector" class="h-2.5 w-2.5 rounded-full"
-                              :style="{ backgroundColor: currentSector.color || '#94A3B8' }" />
-                        <h2 class="text-[16px] font-semibold text-foreground tracking-tight">
-                            {{ currentSector ? currentSector.name : 'Conversas' }}
-                        </h2>
-                    </div>
-                    <p class="text-[12px] text-muted-foreground">
-                        {{ currentSector ? `Tickets do setor ${currentSector.name}` : 'Todas as conversas ativas' }}
-                    </p>
+            <section class="w-[300px] shrink-0 border-r border-border bg-card flex flex-col">
+                <div class="px-4 pt-4 pb-3 border-b border-border">
+                    <h2 class="text-[14px] font-semibold text-foreground mb-3">
+                        {{ currentSector ? currentSector.name : 'Todas as conversas' }}
+                    </h2>
 
-                    <div class="relative mt-4">
-                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <div class="relative">
+                        <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                         <Input v-model="store.filters.search" type="text"
-                               placeholder="Buscar nome, telefone ou protocolo" class="pl-9 h-9 text-[13px]" />
+                               placeholder="Nome, telefone ou protocolo" class="pl-9 h-8 text-[12.5px]" />
                     </div>
 
-                    <div class="flex flex-wrap gap-1.5 mt-3">
-                        <button v-for="s in statusOptions" :key="s.value"
-                                @click="store.filters.status = s.value; store.fetchTickets()"
-                                :class="['text-[11.5px] px-2.5 py-1 rounded-full font-medium transition-colors',
-                                         store.filters.status === s.value
-                                             ? 'bg-foreground text-background'
-                                             : 'bg-muted text-muted-foreground hover:bg-muted/70']">
-                            {{ s.label }}
+                    <!-- Status filter -->
+                    <div class="relative mt-2.5">
+                        <button
+                            @click="filterOpen = !filterOpen"
+                            class="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-[12.5px] font-medium text-foreground transition-colors hover:bg-muted/60"
+                        >
+                            <div class="flex items-center gap-1.5">
+                                <SlidersHorizontal class="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>{{ currentStatusLabel }}</span>
+                            </div>
+                            <svg class="h-3.5 w-3.5 text-muted-foreground transition-transform" :class="filterOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                         </button>
+
+                        <div v-if="filterOpen" class="fixed inset-0 z-40" @click="filterOpen = false" />
+
+                        <Transition
+                            enter-from-class="opacity-0 -translate-y-1"
+                            enter-active-class="transition duration-100"
+                            leave-to-class="opacity-0 -translate-y-1"
+                            leave-active-class="transition duration-100"
+                        >
+                            <div v-if="filterOpen"
+                                 class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-md"
+                            >
+                                <button
+                                    v-for="s in statusOptions"
+                                    :key="s.value"
+                                    @click="setStatus(s.value)"
+                                    class="flex w-full items-center justify-between px-3 py-2 text-left text-[12.5px] transition-colors hover:bg-muted/60"
+                                    :class="store.filters.status === s.value ? 'font-semibold text-foreground' : 'text-muted-foreground'"
+                                >
+                                    {{ s.label }}
+                                    <Check v-if="store.filters.status === s.value" class="h-3.5 w-3.5 text-primary" />
+                                </button>
+                            </div>
+                        </Transition>
                     </div>
                 </div>
 
@@ -277,8 +364,7 @@ onBeforeUnmount(() => {
 
             <!-- Painel cliente -->
             <ClientPanel :ticket="store.active"
-                         @close="store.closeActive()"
-                         @transfer="$emit('open-transfer')" />
+                         @close="store.closeActive()" />
         </div>
     </AppLayout>
 </template>

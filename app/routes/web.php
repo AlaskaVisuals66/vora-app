@@ -14,6 +14,7 @@ Route::get('/settings', fn () => Inertia::render('Settings/Index'))->name('setti
 Route::get('/profile', fn () => Inertia::render('Profile/Index'))->name('profile');
 
 if (app()->environment('local')) {
-    Route::get('/_ui', fn () => Inertia::render('_Ui/Index'))->name('_ui');
+    Route::get('/_ui',        fn () => Inertia::render('_Ui/Index'))->name('_ui');
+    Route::get('/simulator',  fn () => Inertia::render('Simulator/Index'))->name('simulator');
 }
 

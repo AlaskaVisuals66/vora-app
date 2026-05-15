@@ -7,11 +7,23 @@ use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\TenantController;
 use App\Http\Controllers\Api\V1\TicketController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\BotConfigController;
+use App\Http\Controllers\Api\V1\DevSimulatorController;
 use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\WhatsappSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+
+    // Public bot config (for n8n — no auth)
+    Route::get('bot/config', [BotConfigController::class, 'index']);
+
+    // Dev simulator (local env only — no auth needed for convenience)
+    if (app()->environment('local')) {
+        Route::post('dev/simulate/send',    [DevSimulatorController::class, 'send']);
+        Route::get('dev/simulate',          [DevSimulatorController::class, 'get']);
+        Route::post('dev/simulate/reset',   [DevSimulatorController::class, 'reset']);
+    }
 
     // Public webhooks (no auth — secured via shared secret / network)
     Route::post('webhooks/evolution', [WebhookController::class, 'evolution'])
@@ -71,6 +83,8 @@ Route::prefix('v1')->group(function () {
             Route::put('tenant', [TenantController::class, 'update']);
             Route::put('tenant/gateway', [TenantController::class, 'updateGateway']);
             Route::post('tenant/logo', [TenantController::class, 'uploadLogo']);
+            Route::get('tenant/bot', [TenantController::class, 'getBotConfig']);
+            Route::put('tenant/bot', [TenantController::class, 'updateBot']);
         });
     });
 });

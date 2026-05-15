@@ -23,6 +23,6 @@ onMounted(() => initEcho());
                 <slot />
             </main>
         </div>
-        <Toaster rich-colors position="top-right" />
     </div>
+    <Toaster position="bottom-right" />
 </template>

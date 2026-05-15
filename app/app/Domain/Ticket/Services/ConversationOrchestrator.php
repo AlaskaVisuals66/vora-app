@@ -39,6 +39,7 @@ class ConversationOrchestrator
 
         $session = WhatsappSession::where('instance_name', $evt->instance)->firstOrFail();
         $tenantId = $session->tenant_id;
+        app()->instance('tenant.id', $tenantId);
 
         DB::transaction(function () use ($evt, $session, $tenantId) {
             $client = Client::firstOrCreate(

@@ -54,9 +54,6 @@ RUN apk add --no-cache \
         bash \
         curl \
         tini \
-        sqlite \
-        sqlite-dev \
-        sqlite-libs \
         icu-dev \
         oniguruma-dev \
         libzip-dev \
@@ -74,7 +71,7 @@ RUN apk add --no-cache \
         intl \
         opcache \
         pcntl \
-        pdo_sqlite \
+        pdo_mysql \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \

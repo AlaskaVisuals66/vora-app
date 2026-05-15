@@ -2,15 +2,14 @@
 import { computed } from 'vue';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
-import { Button } from '@/Components/ui/button';
 import { Separator } from '@/Components/ui/separator';
 import { useFormat } from '@/Composables/useFormat';
-import { ArrowRightLeft, X, Phone, Hash, Calendar, Building2, UserCheck } from 'lucide-vue-next';
+import { Hash, Calendar, Building2, UserCheck } from 'lucide-vue-next';
 
 const props = defineProps({
     ticket: { type: Object, default: null },
 });
-defineEmits(['close', 'transfer']);
+defineEmits(['close']);
 
 const { phone, dt } = useFormat();
 const client = computed(() => props.ticket?.client || {});
@@ -92,17 +91,5 @@ const statusVariant = computed(() => ({
             </div>
         </div>
 
-        <!-- Actions -->
-        <div class="mt-auto px-6 py-4 border-t border-border space-y-2 bg-muted/30">
-            <Button variant="outline" class="w-full" @click="$emit('transfer')">
-                <ArrowRightLeft class="h-3.5 w-3.5" />
-                Transferir
-            </Button>
-            <Button variant="destructive" class="w-full"
-                    @click="$emit('close')" :disabled="ticket.status === 'closed'">
-                <X class="h-3.5 w-3.5" />
-                Encerrar atendimento
-            </Button>
-        </div>
     </aside>
 </template>

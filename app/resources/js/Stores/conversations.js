@@ -52,7 +52,9 @@ export const useConversationsStore = defineStore('conversations', {
 
         pushIncomingMessage(msg) {
             if (this.active && msg.ticket_id === this.active.id) {
-                this.messages.push(msg);
+                if (!this.messages.some((m) => m.id === msg.id)) {
+                    this.messages.push(msg);
+                }
             }
             const t = this.tickets.find((t) => t.id === msg.ticket_id);
             if (t) t.last_message_at = msg.created_at;

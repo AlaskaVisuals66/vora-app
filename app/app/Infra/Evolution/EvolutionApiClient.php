@@ -2,6 +2,7 @@
 
 namespace App\Infra\Evolution;
 
+use App\Domain\Tenancy\Models\Tenant;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -25,16 +26,46 @@ class EvolutionApiClient
 
     private function baseUrlInit(): void
     {
-        $this->url = rtrim((string) ($this->baseUrl ?: config('services.evolution.url')), '/');
-        $this->key = $this->apiKey ?: (string) config('services.evolution.api_key');
+        $settings = $this->tenantEvolutionSettings();
+
+        $url = $this->baseUrl ?: ($settings['base_url'] ?? null) ?: config('services.evolution.url');
+        $key = $this->apiKey ?: ($settings['api_key'] ?? null) ?: config('services.evolution.api_key');
+
+        $this->url = rtrim((string) $url, '/');
+        $this->key = (string) $key;
     }
 
     private function client(): PendingRequest
     {
-        return Http::baseUrl($this->url)
+        $this->baseUrlInit();
+
+        $client = Http::baseUrl($this->url)
             ->withHeaders(['apikey' => $this->key, 'Accept' => 'application/json'])
             ->timeout($this->timeout)
-            ->retry(2, 250, throw: false);
+            ->retry(1, 100, throw: false);
+
+        if (app()->environment('local')) {
+            $client = $client->withoutVerifying();
+        }
+
+        return $client;
+    }
+
+    private function tenantEvolutionSettings(): array
+    {
+        $tenantId = app()->bound('tenant.id') ? app('tenant.id') : null;
+        if (! $tenantId) {
+            return [];
+        }
+
+        $tenant = Tenant::query()->find($tenantId);
+        $gateway = is_array($tenant?->settings['gateway'] ?? null) ? $tenant->settings['gateway'] : [];
+
+        if (($gateway['type'] ?? 'evolution') !== 'evolution') {
+            return [];
+        }
+
+        return is_array($gateway['config'] ?? null) ? $gateway['config'] : [];
     }
 
     public function createInstance(string $instance, array $extra = []): array
@@ -85,7 +116,6 @@ class EvolutionApiClient
         $payload = [
             'number' => $jid,
             'text'   => $text,
-            'options'=> [ 'delay' => 600, 'presence' => 'composing' ],
         ];
         if ($quotedId) {
             $payload['quoted'] = ['key' => ['id' => $quotedId]];

@@ -4,10 +4,8 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import axios from 'axios';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import PageHeader from '@/Components/vora/PageHeader.vue';
 import EmptyState from '@/Components/vora/EmptyState.vue';
 import { Card } from '@/Components/ui/card';
-import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Skeleton } from '@/Components/ui/skeleton';
 import { Inbox, Headphones, CheckCircle2, Clock, Users, BarChart3 } from 'lucide-vue-next';
@@ -29,26 +27,22 @@ const cards = computed(() => [
         label: 'Tickets em aberto',
         value: data.value?.kpis?.open_tickets ?? 0,
         icon: Inbox,
-        hint: 'Aguardando atendimento',
     },
     {
         label: 'Em atendimento',
         value: data.value?.kpis?.in_progress ?? 0,
         icon: Headphones,
-        hint: 'Sendo atendidos agora',
     },
     {
         label: 'Resolvidos hoje',
         value: data.value?.kpis?.resolved_today ?? 0,
         icon: CheckCircle2,
-        hint: 'Finalizados hoje',
     },
     {
         label: 'Tempo médio',
         value: Math.max(0, data.value?.kpis?.avg_handling_minutes ?? 0),
         icon: Clock,
         suffix: 'min',
-        hint: 'Para resolver um ticket',
     },
 ]);
 
@@ -69,10 +63,8 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
 
 <template>
     <Head title="Início — Vora" />
-    <AppLayout title="Início">
+    <AppLayout>
         <div class="px-8 py-8 space-y-8 max-w-[1200px] mx-auto">
-
-            <PageHeader title="Início" description="Veja como está o atendimento hoje" />
 
             <!-- KPIs -->
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -95,7 +87,6 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                                 <span v-if="c.suffix" class="text-[15px] text-muted-foreground">{{ c.suffix }}</span>
                             </template>
                         </div>
-                        <p class="mt-2.5 text-[12px] text-muted-foreground">{{ c.hint }}</p>
                     </Card>
                 </Motion>
             </div>
@@ -109,7 +100,6 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                             <h3 class="text-[15px] font-semibold tracking-tight text-foreground">
                                 Atendimentos nos últimos 7 dias
                             </h3>
-                            <p class="text-[12.5px] text-muted-foreground">Quantos tickets foram abertos por dia</p>
                         </div>
 
                         <div v-if="loading" class="mt-6 flex items-end gap-2.5 h-44">
@@ -187,20 +177,27 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                     </div>
 
                     <div v-else-if="attendants.length" class="overflow-x-auto">
-                        <table class="w-full text-[13px]">
+                        <table class="w-full min-w-[760px] table-fixed text-[13px]">
+                            <colgroup>
+                                <col class="w-[38%]" />
+                                <col class="w-[16%]" />
+                                <col class="w-[16%]" />
+                                <col class="w-[16%]" />
+                                <col class="w-[14%]" />
+                            </colgroup>
                             <thead>
                                 <tr class="border-y border-border bg-muted/40">
-                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Atendente</th>
-                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Função</th>
-                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Em atendimento</th>
-                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Resolvidos hoje</th>
-                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-2.5 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider whitespace-nowrap">Atendente</th>
+                                    <th class="px-6 py-2.5 text-center font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider whitespace-nowrap">Função</th>
+                                    <th class="px-6 py-2.5 text-center font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider whitespace-nowrap">Em atendimento</th>
+                                    <th class="px-6 py-2.5 text-center font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider whitespace-nowrap">Resolvidos hoje</th>
+                                    <th class="px-6 py-2.5 text-center font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider whitespace-nowrap">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
                                 <tr v-for="a in attendants" :key="a.id"
                                     class="hover:bg-muted/40 transition-colors">
-                                    <td class="px-6 py-3.5">
+                                    <td class="px-6 py-3.5 align-middle">
                                         <div class="flex items-center gap-3 min-w-0">
                                             <Avatar class="h-9 w-9">
                                                 <AvatarFallback class="text-[12px]">{{ initials(a.name) }}</AvatarFallback>
@@ -211,13 +208,13 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-3.5">
-                                        <Badge variant="outline">{{ roleLabel(a.role) }}</Badge>
+                                    <td class="px-6 py-3.5 text-center align-middle">
+                                        <span class="inline-block w-full text-[12.5px] font-medium text-foreground">{{ roleLabel(a.role) }}</span>
                                     </td>
-                                    <td class="px-6 py-3.5 tabular-nums text-foreground">{{ a.in_progress }}</td>
-                                    <td class="px-6 py-3.5 tabular-nums text-foreground">{{ a.resolved }}</td>
-                                    <td class="px-6 py-3.5">
-                                        <span class="inline-flex items-center gap-2">
+                                    <td class="px-6 py-3.5 text-center align-middle tabular-nums text-foreground">{{ a.in_progress }}</td>
+                                    <td class="px-6 py-3.5 text-center align-middle tabular-nums text-foreground">{{ a.resolved }}</td>
+                                    <td class="px-6 py-3.5 text-center align-middle">
+                                        <span class="inline-flex w-full items-center justify-center gap-2">
                                             <span class="h-2 w-2 rounded-full"
                                                   :class="a.status === 'online' ? 'bg-foreground' : 'bg-muted-foreground/30'" />
                                             <span class="text-[12.5px]"
