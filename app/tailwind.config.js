@@ -59,7 +59,7 @@ export default {
                 vora: {
                     navy:        '#0A0A0A',
                     'navy-deep': '#171717',
-                    orange:      '#F43C1A',
+                    orange:      '#EF351A',
                     'orange-light': '#FED7AA',
                     bg:          '#FFFFFF',
                     border:      '#E5E5E5',
@@ -71,7 +71,7 @@ export default {
                     foreground: '#A3A3A3',
                     muted:      '#737373',
                     accent:     '#1C1C1C',
-                    active:     '#F43C1A',
+                    active:     '#EF351A',
                     border:     '#262626',
                 },
             },
