@@ -65,9 +65,12 @@ const stateLabel = (state) => ({
 }[state] || state);
 
 /* ---------- Tenant + integrations ---------- */
+const emptyAddress = () => ({
+    zip: '', street: '', number: '', complement: '', district: '', city: '', state: '',
+});
 const tenantForm = ref({
-    name: '', document: '', whatsapp: '', email: '', address: '',
-    timezone: '', plan: '', logo_url: null,
+    name: '', document: '', whatsapp: '', email: '',
+    address: emptyAddress(), logo_url: null,
 });
 const integrations = ref(null);
 const tenantSaving = ref(false);
@@ -75,13 +78,13 @@ const tenantError = ref(null);
 const logoUploading = ref(false);
 const logoInput = ref(null);
 
-const timezones = [
-    'America/Sao_Paulo', 'America/Manaus', 'America/Belem', 'America/Fortaleza',
-    'America/Recife', 'America/Cuiaba', 'America/Rio_Branco', 'America/Noronha', 'UTC',
-];
-
 const tenantInitials = computed(() => (tenantForm.value.name || '?')
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase());
+
+const whatsappModel = computed({
+    get: () => tenantForm.value.whatsapp,
+    set: (v) => { tenantForm.value.whatsapp = String(v ?? '').replace(/\D/g, ''); },
+});
 
 function applyTenant(t) {
     tenantForm.value = {
@@ -89,9 +92,7 @@ function applyTenant(t) {
         document: t.document || '',
         whatsapp: t.whatsapp || '',
         email: t.email || '',
-        address: t.address || '',
-        timezone: t.timezone || 'America/Sao_Paulo',
-        plan: t.plan || 'starter',
+        address: { ...emptyAddress(), ...(t.address || {}) },
         logo_url: t.logo_url || null,
     };
 }
@@ -114,7 +115,6 @@ async function saveTenant() {
             whatsapp: tenantForm.value.whatsapp,
             email: tenantForm.value.email,
             address: tenantForm.value.address,
-            timezone: tenantForm.value.timezone,
         });
         applyTenant(data.data.tenant);
         toast.success('Dados da empresa atualizados');
@@ -167,13 +167,8 @@ onMounted(() => { load(); loadTenant(); });
                     <TabsContent value="company">
                         <Card>
                             <CardHeader>
-                                <div class="flex items-start justify-between gap-4">
-                                    <div>
-                                        <CardTitle>Dados da empresa</CardTitle>
-                                        <CardDescription>Identidade, contato e fuso horário do atendimento.</CardDescription>
-                                    </div>
-                                    <Badge variant="outline" class="shrink-0 capitalize">{{ tenantForm.plan }}</Badge>
-                                </div>
+                                <CardTitle>Dados da empresa</CardTitle>
+                                <CardDescription>Identidade, contato e endereço da empresa.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <form @submit.prevent="saveTenant" class="space-y-5 max-w-xl">
@@ -185,7 +180,6 @@ onMounted(() => { load(); loadTenant(); });
                                         </Avatar>
                                         <div class="space-y-1">
                                             <p class="text-[12.5px] font-medium text-foreground">Foto de perfil</p>
-                                            <p class="text-[11.5px] text-muted-foreground">PNG, JPG ou WEBP — até 2 MB.</p>
                                             <input ref="logoInput" type="file" accept="image/png,image/jpeg,image/webp"
                                                    class="hidden" @change="onLogoChange" />
                                             <Button type="button" variant="outline" size="sm" class="mt-1"
@@ -207,22 +201,45 @@ onMounted(() => { load(); loadTenant(); });
                                         </div>
                                         <div class="space-y-1.5">
                                             <label class="text-[12px] font-medium text-foreground">WhatsApp</label>
-                                            <Input v-model="tenantForm.whatsapp" placeholder="(11) 90000-0000" />
+                                            <Input v-model="whatsappModel" inputmode="numeric" placeholder="11900000000" />
                                         </div>
-                                        <div class="space-y-1.5">
+                                        <div class="space-y-1.5 sm:col-span-2">
                                             <label class="text-[12px] font-medium text-foreground">E-mail de contato</label>
                                             <Input v-model="tenantForm.email" type="email" placeholder="contato@empresa.com" />
                                         </div>
-                                        <div class="space-y-1.5">
-                                            <label class="text-[12px] font-medium text-foreground">Fuso horário</label>
-                                            <select v-model="tenantForm.timezone"
-                                                    class="flex h-9 w-full rounded-md border border-border bg-card px-3 py-1 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors">
-                                                <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
-                                            </select>
-                                        </div>
-                                        <div class="space-y-1.5 sm:col-span-2">
-                                            <label class="text-[12px] font-medium text-foreground">Endereço</label>
-                                            <Input v-model="tenantForm.address" placeholder="Rua, número, cidade — UF" />
+                                    </div>
+
+                                    <div class="border-t border-border pt-5">
+                                        <p class="text-[12.5px] font-medium text-foreground mb-3">Endereço</p>
+                                        <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
+                                            <div class="space-y-1.5 sm:col-span-2">
+                                                <label class="text-[12px] font-medium text-foreground">CEP</label>
+                                                <Input v-model="tenantForm.address.zip" placeholder="00000-000" />
+                                            </div>
+                                            <div class="space-y-1.5 sm:col-span-4">
+                                                <label class="text-[12px] font-medium text-foreground">Logradouro</label>
+                                                <Input v-model="tenantForm.address.street" placeholder="Rua / Avenida" />
+                                            </div>
+                                            <div class="space-y-1.5 sm:col-span-2">
+                                                <label class="text-[12px] font-medium text-foreground">Número</label>
+                                                <Input v-model="tenantForm.address.number" placeholder="123" />
+                                            </div>
+                                            <div class="space-y-1.5 sm:col-span-4">
+                                                <label class="text-[12px] font-medium text-foreground">Complemento</label>
+                                                <Input v-model="tenantForm.address.complement" placeholder="Sala, andar, bloco" />
+                                            </div>
+                                            <div class="space-y-1.5 sm:col-span-3">
+                                                <label class="text-[12px] font-medium text-foreground">Bairro</label>
+                                                <Input v-model="tenantForm.address.district" placeholder="Bairro" />
+                                            </div>
+                                            <div class="space-y-1.5 sm:col-span-2">
+                                                <label class="text-[12px] font-medium text-foreground">Cidade</label>
+                                                <Input v-model="tenantForm.address.city" placeholder="Cidade" />
+                                            </div>
+                                            <div class="space-y-1.5 sm:col-span-1">
+                                                <label class="text-[12px] font-medium text-foreground">UF</label>
+                                                <Input v-model="tenantForm.address.state" maxlength="2" placeholder="MT" />
+                                            </div>
                                         </div>
                                     </div>
 
