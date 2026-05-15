@@ -15,15 +15,23 @@ class UserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->user()->tenant_id;
-        $today    = now()->startOfDay();
+        $tenantId  = $request->user()->tenant_id;
+        $me        = $request->user();
+        $today     = now()->startOfDay();
         $threshold = now()->subMinutes(5);
 
-        $users = User::query()
+        $base = User::query()
             ->where('tenant_id', $tenantId)
+            ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'superadmin'))
             ->with('roles:id,name')
-            ->orderBy('name')
-            ->get(['id','name','email','phone','is_active','last_seen_at']);
+            ->orderBy('name');
+
+        if ($me->hasRole('attendant') || $me->hasRole('supervisor')) {
+            $mySectorIds = $me->sectors()->pluck('sectors.id');
+            $base->whereHas('sectors', fn ($q) => $q->whereIn('sectors.id', $mySectorIds));
+        }
+
+        $users = $base->get(['id','name','email','phone','is_active','last_seen_at']);
 
         $inProgress = Ticket::query()
             ->where('tenant_id', $tenantId)

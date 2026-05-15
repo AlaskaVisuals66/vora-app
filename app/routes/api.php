@@ -44,13 +44,15 @@ Route::prefix('v1')->group(function () {
 
         Route::get('analytics/dashboard',        [AnalyticsController::class, 'dashboard']);
 
+        Route::get('users', [UserController::class, 'index']);
+
         Route::middleware(['role:admin'])->group(function () {
             Route::apiResource('whatsapp/sessions', WhatsappSessionController::class)
                 ->only(['index','store','destroy']);
             Route::post('whatsapp/sessions/{session}/reconnect', [WhatsappSessionController::class, 'reconnect']);
             Route::get('whatsapp/sessions/{session}/qr',         [WhatsappSessionController::class, 'qr']);
 
-            Route::apiResource('users', UserController::class)->only(['index','store','update','destroy']);
+            Route::apiResource('users', UserController::class)->only(['store','update','destroy']);
 
             Route::post('sectors',                          [SectorController::class, 'store']);
             Route::put('sectors/{sector}',                [SectorController::class, 'update']);
