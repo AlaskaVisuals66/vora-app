@@ -27,12 +27,14 @@ function isActive(href) {
 <template>
     <aside class="flex h-screen w-60 shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
         <!-- Logo -->
-        <div class="flex h-14 items-center px-5">
-            <img src="/images/logo.png" alt="Vora" class="h-8 w-auto object-contain" />
+        <div class="flex h-[76px] shrink-0 items-center justify-center px-5 pt-4 pb-3">
+            <img src="/images/logo.png" alt="Vora"
+                 class="block w-auto object-contain"
+                 style="max-width: 92px; max-height: 42px; height: auto;" />
         </div>
 
         <!-- Nav -->
-        <nav class="flex-1 space-y-0.5 px-2 py-2">
+        <nav class="flex-1 space-y-0.5 px-2 pb-2">
             <Link
                 v-for="item in nav"
                 :key="item.href"
