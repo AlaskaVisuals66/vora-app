@@ -52,9 +52,11 @@ Route::prefix('v1')->group(function () {
 
             Route::apiResource('users', UserController::class)->only(['index','store','update','destroy']);
 
-            Route::post('sectors',            [SectorController::class, 'store']);
-            Route::put('sectors/{sector}',    [SectorController::class, 'update']);
-            Route::delete('sectors/{sector}', [SectorController::class, 'destroy']);
+            Route::post('sectors',                          [SectorController::class, 'store']);
+            Route::put('sectors/{sector}',                [SectorController::class, 'update']);
+            Route::delete('sectors/{sector}',             [SectorController::class, 'destroy']);
+            Route::put('sectors/{sector}/ai-settings',    [SectorController::class, 'aiSettings']);
+            Route::post('sectors/{sector}/n8n-action',    [SectorController::class, 'n8nAction']);
 
             Route::get('tenant', [TenantController::class, 'show']);
             Route::put('tenant', [TenantController::class, 'update']);

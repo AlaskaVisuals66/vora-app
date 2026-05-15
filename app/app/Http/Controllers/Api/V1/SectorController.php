@@ -49,6 +49,7 @@ class SectorController extends Controller
                 'children'         => $s->relationLoaded('children')
                     ? $s->children->map($present)->values()
                     : [],
+                'ai_settings'      => $s->ai_settings ?? ['ai_enabled' => false, 'ai_prompt' => '', 'n8n_workflow_id' => '', 'n8n_webhook_path' => ''],
             ];
         };
 
@@ -112,6 +113,41 @@ class SectorController extends Controller
         $sector->delete();
 
         return response()->json(['data' => ['deleted' => true]]);
+    }
+
+    public function aiSettings(Request $request, Sector $sector): JsonResponse
+    {
+        abort_unless($sector->tenant_id === $request->user()->tenant_id, 404);
+
+        $data = $request->validate([
+            'ai_enabled'       => ['boolean'],
+            'ai_prompt'        => ['nullable', 'string', 'max:5000'],
+            'n8n_workflow_id'  => ['nullable', 'string', 'max:255'],
+            'n8n_webhook_path' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $sector->ai_settings = array_merge($sector->ai_settings ?? [], $data);
+        $sector->save();
+
+        return response()->json(['data' => $sector->fresh()]);
+    }
+
+    public function n8nAction(Request $request, Sector $sector): JsonResponse
+    {
+        abort_unless($sector->tenant_id === $request->user()->tenant_id, 404);
+
+        $data = $request->validate([
+            'type' => ['required', \Illuminate\Validation\Rule::in(['edit-number', 'edit-conversation'])],
+        ]);
+
+        $path = $data['type'] === 'edit-number' ? 'edit-number' : 'edit-conversation';
+
+        app(\App\Infra\N8n\N8nClient::class)->trigger($path, [
+            'sector_id' => $sector->id,
+            'tenant_id' => $sector->tenant_id,
+        ]);
+
+        return response()->json(['ok' => true]);
     }
 
     private function uniqueSlug(int $tenantId, string $name): string

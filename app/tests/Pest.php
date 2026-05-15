@@ -1,8 +1,9 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class)->in('Feature');
+uses(TestCase::class, RefreshDatabase::class)->in('Feature');
 
 // Helper: create a tenant + seeded roles, return the tenant
 function createTenant(string $name = 'Acme'): \App\Domain\Tenancy\Models\Tenant
@@ -33,6 +34,12 @@ function createUser(
     ], $attrs));
     $user->assignRole($role);
     return $user;
+}
+
+// Helper: generate a JWT token for a user
+function jwtToken(\App\Domain\Auth\Models\User $user): string
+{
+    return \Tymon\JWTAuth\Facades\JWTAuth::fromUser($user);
 }
 
 // Helper: create a sector inside a tenant

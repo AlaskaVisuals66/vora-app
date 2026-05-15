@@ -14,12 +14,13 @@ class Sector extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tenant_id','parent_id','name','slug','menu_key','color','icon','description','working_hours','settings','active','order',
+        'tenant_id','parent_id','name','slug','menu_key','color','icon','description','working_hours','settings','ai_settings','active','order',
     ];
 
     protected $casts = [
         'working_hours' => 'array',
         'settings'      => 'array',
+        'ai_settings'   => 'array',
         'active' => 'bool',
         'order'  => 'int',
     ];
