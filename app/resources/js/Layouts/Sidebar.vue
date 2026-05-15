@@ -42,7 +42,7 @@ const roleLabel = computed(() => {
 
 <template>
     <aside
-        class="flex h-screen flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out"
+        class="flex h-screen flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out"
         :class="expanded() ? 'w-60' : 'w-[64px]'"
         @mouseenter="hovered = true"
         @mouseleave="hovered = false"

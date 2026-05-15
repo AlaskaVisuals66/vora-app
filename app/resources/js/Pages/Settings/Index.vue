@@ -8,7 +8,8 @@ import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/Components/ui/tabs';
-import { onMounted, ref } from 'vue';
+import { Avatar, AvatarImage, AvatarFallback } from '@/Components/ui/avatar';
+import { onMounted, ref, computed } from 'vue';
 import axios from 'axios';
 import { toast } from 'vue-sonner';
 import { Plus, QrCode, RefreshCw, Trash2, Smartphone, CheckCircle2, Building2, Plug } from 'lucide-vue-next';
@@ -64,25 +65,41 @@ const stateLabel = (state) => ({
 }[state] || state);
 
 /* ---------- Tenant + integrations ---------- */
-const tenantForm = ref({ name: '', document: '', timezone: '', plan: '' });
+const tenantForm = ref({
+    name: '', document: '', whatsapp: '', email: '', address: '',
+    timezone: '', plan: '', logo_url: null,
+});
 const integrations = ref(null);
 const tenantSaving = ref(false);
 const tenantError = ref(null);
+const logoUploading = ref(false);
+const logoInput = ref(null);
 
 const timezones = [
     'America/Sao_Paulo', 'America/Manaus', 'America/Belem', 'America/Fortaleza',
     'America/Recife', 'America/Cuiaba', 'America/Rio_Branco', 'America/Noronha', 'UTC',
 ];
 
+const tenantInitials = computed(() => (tenantForm.value.name || '?')
+    .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase());
+
+function applyTenant(t) {
+    tenantForm.value = {
+        name: t.name || '',
+        document: t.document || '',
+        whatsapp: t.whatsapp || '',
+        email: t.email || '',
+        address: t.address || '',
+        timezone: t.timezone || 'America/Sao_Paulo',
+        plan: t.plan || 'starter',
+        logo_url: t.logo_url || null,
+    };
+}
+
 async function loadTenant() {
     try {
         const { data } = await axios.get('/api/v1/tenant');
-        tenantForm.value = {
-            name: data.data.tenant.name || '',
-            document: data.data.tenant.document || '',
-            timezone: data.data.tenant.timezone || 'America/Sao_Paulo',
-            plan: data.data.tenant.plan || 'starter',
-        };
+        applyTenant(data.data.tenant);
         integrations.value = data.data.integrations;
     } catch (_) {}
 }
@@ -91,16 +108,39 @@ async function saveTenant() {
     tenantSaving.value = true;
     tenantError.value = null;
     try {
-        await axios.put('/api/v1/tenant', {
+        const { data } = await axios.put('/api/v1/tenant', {
             name: tenantForm.value.name,
             document: tenantForm.value.document,
+            whatsapp: tenantForm.value.whatsapp,
+            email: tenantForm.value.email,
+            address: tenantForm.value.address,
             timezone: tenantForm.value.timezone,
         });
+        applyTenant(data.data.tenant);
         toast.success('Dados da empresa atualizados');
     } catch (e) {
         tenantError.value = e.response?.data?.message || 'Falha ao salvar os dados da empresa.';
     } finally {
         tenantSaving.value = false;
+    }
+}
+
+async function onLogoChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    logoUploading.value = true;
+    tenantError.value = null;
+    try {
+        const fd = new FormData();
+        fd.append('logo', file);
+        const { data } = await axios.post('/api/v1/tenant/logo', fd);
+        applyTenant(data.data.tenant);
+        toast.success('Logo atualizada');
+    } catch (e) {
+        tenantError.value = e.response?.data?.message || 'Falha ao enviar a imagem.';
+    } finally {
+        logoUploading.value = false;
+        if (logoInput.value) logoInput.value.value = '';
     }
 }
 
@@ -130,21 +170,48 @@ onMounted(() => { load(); loadTenant(); });
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
                                         <CardTitle>Dados da empresa</CardTitle>
-                                        <CardDescription>Informações do tenant e fuso horário do atendimento.</CardDescription>
+                                        <CardDescription>Identidade, contato e fuso horário do atendimento.</CardDescription>
                                     </div>
                                     <Badge variant="outline" class="shrink-0 capitalize">{{ tenantForm.plan }}</Badge>
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <form @submit.prevent="saveTenant" class="space-y-4 max-w-xl">
+                                <form @submit.prevent="saveTenant" class="space-y-5 max-w-xl">
+                                    <!-- Logo -->
+                                    <div class="flex items-center gap-4">
+                                        <Avatar class="h-16 w-16 rounded-xl">
+                                            <AvatarImage v-if="tenantForm.logo_url" :src="tenantForm.logo_url" alt="Logo" />
+                                            <AvatarFallback class="rounded-xl text-[16px]">{{ tenantInitials }}</AvatarFallback>
+                                        </Avatar>
+                                        <div class="space-y-1">
+                                            <p class="text-[12.5px] font-medium text-foreground">Foto de perfil</p>
+                                            <p class="text-[11.5px] text-muted-foreground">PNG, JPG ou WEBP — até 2 MB.</p>
+                                            <input ref="logoInput" type="file" accept="image/png,image/jpeg,image/webp"
+                                                   class="hidden" @change="onLogoChange" />
+                                            <Button type="button" variant="outline" size="sm" class="mt-1"
+                                                    :disabled="logoUploading" @click="logoInput?.click()">
+                                                {{ logoUploading ? 'Enviando…' : 'Alterar imagem' }}
+                                            </Button>
+                                        </div>
+                                    </div>
+
                                     <div class="space-y-1.5">
                                         <label class="text-[12px] font-medium text-foreground">Nome da empresa</label>
                                         <Input v-model="tenantForm.name" required placeholder="Minha Empresa Ltda" />
                                     </div>
+
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div class="space-y-1.5">
                                             <label class="text-[12px] font-medium text-foreground">CNPJ / Documento</label>
                                             <Input v-model="tenantForm.document" placeholder="00.000.000/0001-00" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-[12px] font-medium text-foreground">WhatsApp</label>
+                                            <Input v-model="tenantForm.whatsapp" placeholder="(11) 90000-0000" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-[12px] font-medium text-foreground">E-mail de contato</label>
+                                            <Input v-model="tenantForm.email" type="email" placeholder="contato@empresa.com" />
                                         </div>
                                         <div class="space-y-1.5">
                                             <label class="text-[12px] font-medium text-foreground">Fuso horário</label>
@@ -152,6 +219,10 @@ onMounted(() => { load(); loadTenant(); });
                                                     class="flex h-9 w-full rounded-md border border-border bg-card px-3 py-1 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors">
                                                 <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
                                             </select>
+                                        </div>
+                                        <div class="space-y-1.5 sm:col-span-2">
+                                            <label class="text-[12px] font-medium text-foreground">Endereço</label>
+                                            <Input v-model="tenantForm.address" placeholder="Rua, número, cidade — UF" />
                                         </div>
                                     </div>
 
