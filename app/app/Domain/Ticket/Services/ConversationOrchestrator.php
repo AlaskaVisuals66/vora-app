@@ -119,6 +119,22 @@ class ConversationOrchestrator
                     $ticket->save();
                 }
             }
+
+            // Dispatch AI webhook if sector has ai_enabled and message is on an open/pending ticket
+            if (in_array($ticket->status, ['open', 'pending'], true) && $ticket->sector_id && $isText) {
+                $sector     = $ticket->sector;
+                $aiSettings = $sector?->ai_settings ?? [];
+                if (! empty($aiSettings['ai_enabled']) && ! empty($aiSettings['n8n_webhook_path'])) {
+                    \App\Jobs\TriggerAiWebhook::dispatch($aiSettings['n8n_webhook_path'], [
+                        'tenant_id'   => $tenantId,
+                        'ticket_id'   => $ticket->id,
+                        'sector_id'   => $ticket->sector_id,
+                        'prompt'      => $aiSettings['ai_prompt'] ?? '',
+                        'message'     => $message->body,
+                        'client'      => ['phone' => $client->phone, 'name' => $client->name],
+                    ]);
+                }
+            }
         });
     }
 
