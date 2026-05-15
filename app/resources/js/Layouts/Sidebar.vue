@@ -27,10 +27,10 @@ function isActive(href) {
 <template>
     <aside class="flex h-screen w-60 shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
         <!-- Logo -->
-        <div class="flex h-[76px] shrink-0 items-center justify-center px-5 pt-4 pb-3">
+        <div class="flex h-[76px] shrink-0 items-center px-3 pt-4 pb-3">
             <img src="/images/logo.png" alt="Vora"
-                 class="block w-auto object-contain"
-                 style="max-width: 92px; max-height: 42px; height: auto;" />
+                 class="block object-contain"
+                 style="max-width: 140px; max-height: 50px; height: 100px; width: auto;" />
         </div>
 
         <!-- Nav -->
