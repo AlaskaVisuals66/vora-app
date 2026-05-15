@@ -184,9 +184,6 @@ onBeforeUnmount(() => {
 
             <!-- Coluna de setores -->
             <aside class="flex w-[200px] shrink-0 flex-col border-r border-border bg-card">
-                <div class="flex h-14 shrink-0 items-center border-b border-border px-4">
-                    <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Setores</span>
-                </div>
                 <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
                     <!-- Todos -->
                     <button
