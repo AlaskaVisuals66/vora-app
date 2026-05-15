@@ -41,7 +41,7 @@ function isActive(href) {
                 :href="item.href"
                 class="flex h-10 w-full items-center gap-3 rounded-[var(--radius)] px-3 text-[13px] font-medium transition-colors"
                 :class="isActive(item.href)
-                    ? 'bg-[#E9590C] text-white font-semibold'
+                    ? 'bg-[#F43C1A] text-white font-semibold'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'"
             >
                 <component :is="item.icon" class="h-[18px] w-[18px] shrink-0" />
@@ -59,7 +59,7 @@ function isActive(href) {
                     :href="item.href"
                     class="flex h-9 w-full items-center gap-3 rounded-[var(--radius)] px-3 text-[12px] font-medium transition-colors"
                     :class="isActive(item.href)
-                        ? 'bg-[#E9590C] text-white font-semibold'
+                        ? 'bg-[#F43C1A] text-white font-semibold'
                         : 'text-sidebar-muted hover:bg-sidebar-accent hover:text-white'"
                 >
                     <component :is="item.icon" class="h-[15px] w-[15px] shrink-0" />
