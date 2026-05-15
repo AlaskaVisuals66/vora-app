@@ -27,7 +27,7 @@ fi
 # One-shot seed on first boot (creates default tenant, roles, users)
 # Uses a DB flag so it survives container restarts without a persistent volume.
 if [ "$MODE" = "web" ] && [ "${RUN_SEED:-true}" = "true" ]; then
-    SEEDED=$(php artisan tinker --no-interaction --execute="echo \DB::table('users')->exists() ? '1' : '0';" 2>/dev/null | tail -1 || echo "0")
+    SEEDED=$(php artisan tinker --no-interaction --execute="echo \DB::table('tenants')->exists() ? '1' : '0';" 2>/dev/null | tail -1 || echo "0")
     if [ "$SEEDED" != "1" ]; then
         php artisan db:seed --force --class=DatabaseSeeder || true
     fi
