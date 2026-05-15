@@ -2,7 +2,6 @@
 import { Head } from '@inertiajs/vue3';
 import { Motion } from 'motion-v';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import PageHeader from '@/Components/vora/PageHeader.vue';
 import { Card, CardContent } from '@/Components/ui/card';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
@@ -115,14 +114,12 @@ onMounted(load);
     <Head title="Usuários — Vora" />
     <AppLayout title="Usuários">
         <div class="px-8 py-8 max-w-[1400px] mx-auto">
-                <PageHeader title="Usuários" description="Atendentes, supervisores e administradores">
-                    <template #actions>
-                        <Button variant="outline" @click="openCreate">
-                            <UserPlus class="h-4 w-4" />
-                            Convidar usuário
-                        </Button>
-                    </template>
-                </PageHeader>
+                <div class="flex justify-end pb-5">
+                    <Button variant="outline" @click="openCreate">
+                        <UserPlus class="h-4 w-4" />
+                        Convidar usuário
+                    </Button>
+                </div>
 
                 <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
                         :transition="{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }">
