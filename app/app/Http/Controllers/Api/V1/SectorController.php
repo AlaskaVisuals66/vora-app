@@ -120,7 +120,7 @@ class SectorController extends Controller
         abort_unless($sector->tenant_id === $request->user()->tenant_id, 404);
 
         $data = $request->validate([
-            'ai_enabled'       => ['boolean'],
+            'ai_enabled'       => ['sometimes', 'boolean'],
             'ai_prompt'        => ['nullable', 'string', 'max:5000'],
             'n8n_workflow_id'  => ['nullable', 'string', 'max:255'],
             'n8n_webhook_path' => ['nullable', 'string', 'max:255'],
@@ -137,12 +137,10 @@ class SectorController extends Controller
         abort_unless($sector->tenant_id === $request->user()->tenant_id, 404);
 
         $data = $request->validate([
-            'type' => ['required', \Illuminate\Validation\Rule::in(['edit-number', 'edit-conversation'])],
+            'type' => ['required', Rule::in(['edit-number', 'edit-conversation'])],
         ]);
 
-        $path = $data['type'] === 'edit-number' ? 'edit-number' : 'edit-conversation';
-
-        app(\App\Infra\N8n\N8nClient::class)->trigger($path, [
+        app(\App\Infra\N8n\N8nClient::class)->trigger($data['type'], [
             'sector_id' => $sector->id,
             'tenant_id' => $sector->tenant_id,
         ]);
