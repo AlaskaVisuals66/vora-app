@@ -34,9 +34,7 @@ async function submit() {
                 :transition="{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }">
             <!-- Brand mark above card -->
             <div class="text-center mb-8">
-                <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-vora-mark text-lg font-bold mb-4">
-                    V
-                </div>
+                <img src="/images/logo.png" alt="Vora" class="h-12 w-auto object-contain mx-auto mb-5" />
                 <h1 class="text-[22px] font-semibold text-white tracking-tight">Bem-vindo de volta</h1>
                 <p class="text-[13px] text-white/60 mt-1.5">Acesse sua central de atendimento Vora</p>
             </div>

@@ -26,11 +26,9 @@ function isActive(href) {
 
 <template>
     <aside class="flex h-screen w-60 shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
-        <!-- Wordmark -->
+        <!-- Logo -->
         <div class="flex h-14 items-center px-5">
-            <span class="text-[17px] font-semibold tracking-tight text-white">
-                Vora<span class="text-sidebar-muted">.</span>
-            </span>
+            <img src="/images/logo.png" alt="Vora" class="h-8 w-auto object-contain" />
         </div>
 
         <!-- Nav -->
