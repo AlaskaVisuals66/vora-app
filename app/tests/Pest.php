@@ -21,11 +21,14 @@ function createUser(
     string $role = 'attendant',
     array $attrs = []
 ): \App\Domain\Auth\Models\User {
+    \Spatie\Permission\Models\Role::findOrCreate($role, 'api');
+    app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
     $user = \App\Domain\Auth\Models\User::create(array_merge([
         'tenant_id' => $tenant->id,
         'name'      => 'User '.uniqid(),
         'email'     => 'user'.uniqid().'@test.com',
-        'password'  => bcrypt('password'),
+        'password'  => 'password',
         'is_active' => true,
     ], $attrs));
     $user->assignRole($role);
