@@ -46,11 +46,18 @@ Route::prefix('v1')->group(function () {
 
         Route::get('users', [UserController::class, 'index']);
 
-        Route::middleware(['role:admin'])->group(function () {
-            Route::apiResource('whatsapp/sessions', WhatsappSessionController::class)
-                ->only(['index','store','destroy']);
+        // WhatsApp sessions — read available to all authenticated
+        Route::get('whatsapp/sessions',              [WhatsappSessionController::class, 'index']);
+        Route::get('whatsapp/sessions/{session}/qr', [WhatsappSessionController::class, 'qr']);
+
+        // Create + reconnect: attendants and above
+        Route::middleware(['role:admin|supervisor|attendant'])->group(function () {
+            Route::post('whatsapp/sessions',                     [WhatsappSessionController::class, 'store']);
             Route::post('whatsapp/sessions/{session}/reconnect', [WhatsappSessionController::class, 'reconnect']);
-            Route::get('whatsapp/sessions/{session}/qr',         [WhatsappSessionController::class, 'qr']);
+        });
+
+        Route::middleware(['role:admin'])->group(function () {
+            Route::delete('whatsapp/sessions/{session}', [WhatsappSessionController::class, 'destroy']);
 
             Route::apiResource('users', UserController::class)->only(['store','update','destroy']);
 

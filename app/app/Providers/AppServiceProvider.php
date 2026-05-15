@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(600)->by($request->ip());
         });
 
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Domain\Ticket\Models\WhatsappSession::class,
+            \App\Policies\WhatsappSessionPolicy::class
+        );
+
         if ($this->app->environment('production')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
