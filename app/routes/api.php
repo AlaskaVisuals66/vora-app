@@ -35,6 +35,54 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login',   [AuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
+    // TEMP: diagnostic endpoint (admin only — remove after troubleshooting)
+    Route::get('_diag', function () {
+        $user = auth()->user();
+        abort_unless($user && method_exists($user, 'hasRole') && $user->hasRole('admin'), 403);
+
+        $tenantId = $user->tenant_id;
+        app()->instance('tenant.id', $tenantId);
+
+        $redis = app('redis')->connection();
+        $queues = ['default','high','low','webhooks','broadcasts'];
+        $queueSizes = [];
+        foreach ($queues as $q) {
+            $queueSizes[$q] = $redis->llen("queues:{$q}") + $redis->zcard("queues:{$q}:delayed") + $redis->zcard("queues:{$q}:reserved");
+        }
+
+        $failedRecent = \DB::table('failed_jobs')->orderByDesc('id')->limit(5)->get(['id','queue','payload','exception','failed_at']);
+        $failedRecent = $failedRecent->map(function($r) {
+            return [
+                'id' => $r->id,
+                'queue' => $r->queue,
+                'failed_at' => $r->failed_at,
+                'exception_first_line' => str(strtok($r->exception ?? '', "\n"))->limit(300)->toString(),
+            ];
+        });
+
+        $logPath = storage_path('logs/laravel.log');
+        $logTail = '';
+        if (file_exists($logPath)) {
+            $size = filesize($logPath);
+            $offset = max(0, $size - 8192);
+            $f = fopen($logPath, 'r');
+            fseek($f, $offset);
+            $logTail = fread($f, 8192);
+            fclose($f);
+        }
+
+        return response()->json([
+            'tickets_count'   => \DB::table('tickets')->count(),
+            'messages_count'  => \DB::table('messages')->count(),
+            'clients_count'   => \DB::table('clients')->count(),
+            'failed_jobs_count' => \DB::table('failed_jobs')->count(),
+            'failed_recent'   => $failedRecent,
+            'queue_sizes'     => $queueSizes,
+            'horizon_status'  => app(\Laravel\Horizon\Contracts\MasterSupervisorRepository::class)->all(),
+            'log_tail'        => $logTail,
+        ]);
+    })->middleware(['jwt.auth']);
+
     // Authenticated
     Route::middleware(['jwt.auth','tenant'])->group(function () {
         Route::get('auth/me',     [AuthController::class, 'me']);
