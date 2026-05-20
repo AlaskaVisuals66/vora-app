@@ -67,6 +67,11 @@ const statusVariant = computed(() => ({
     resolved: 'outline', closed: 'outline', menu: 'default',
 }[store.active?.status] || 'outline'));
 
+const statusLabel = computed(() => ({
+    queued: 'Em fila', open: 'Atendendo', pending: 'Aguardando',
+    resolved: 'Resolvido', closed: 'Encerrado', menu: 'Menu',
+}[store.active?.status] || store.active?.status));
+
 const initials = (name) => (name || '?')
     .split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -137,6 +142,22 @@ async function loadSectors() {
     } catch (_) {}
 }
 
+function sectorTotal(s) {
+    const own = Number(s.open_tickets || 0);
+    const children = (s.children || []).reduce((acc, c) => acc + Number(c.open_tickets || 0), 0);
+    return own + children;
+}
+
+function findSectorBySlug(slug) {
+    for (const s of sectors.value) {
+        if (s.slug === slug) return s;
+        for (const c of (s.children || [])) {
+            if (c.slug === slug) return c;
+        }
+    }
+    return null;
+}
+
 function selectSector(sector) {
     currentSector.value = sector || null;
     store.filters.sector_id = sector ? sector.id : null;
@@ -151,7 +172,7 @@ async function resolveSectorFromSlug() {
         currentSector.value = null;
         return;
     }
-    const match = sectors.value.find(s => s.slug === props.sectorSlug);
+    const match = findSectorBySlug(props.sectorSlug);
     currentSector.value = match || null;
     store.filters.sector_id = match ? match.id : null;
 }
@@ -198,24 +219,42 @@ onBeforeUnmount(() => {
                     </button>
 
                     <!-- Setores -->
-                    <button
-                        v-for="s in sectors"
-                        :key="s.id"
-                        @click="selectSector(s)"
-                        class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] font-medium transition-colors"
-                        :class="currentSector?.id === s.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'"
-                    >
-                        <span class="h-2 w-2 shrink-0 rounded-full"
-                              :style="{ backgroundColor: s.color || '#64748b' }" />
-                        <span class="flex-1 truncate">{{ s.name }}</span>
-                        <span v-if="s.open_tickets > 0"
-                              class="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none"
-                              :class="currentSector?.id === s.id ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'">
-                            {{ s.open_tickets }}
-                        </span>
-                    </button>
+                    <template v-for="s in sectors" :key="s.id">
+                        <button
+                            @click="selectSector(s)"
+                            class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[13px] font-medium transition-colors"
+                            :class="currentSector?.id === s.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'"
+                        >
+                            <span class="h-2 w-2 shrink-0 rounded-full"
+                                  :style="{ backgroundColor: s.color || '#64748b' }" />
+                            <span class="flex-1 truncate">{{ s.name }}</span>
+                            <span v-if="sectorTotal(s) > 0"
+                                  class="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none"
+                                  :class="currentSector?.id === s.id ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'">
+                                {{ sectorTotal(s) }}
+                            </span>
+                        </button>
+                        <button
+                            v-for="child in (s.children || [])"
+                            :key="`c-${child.id}`"
+                            @click="selectSector(child)"
+                            class="flex w-full items-center gap-2.5 rounded-md pl-7 pr-3 py-1.5 text-left text-[12.5px] font-medium transition-colors"
+                            :class="currentSector?.id === child.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'"
+                        >
+                            <span class="h-1.5 w-1.5 shrink-0 rounded-full"
+                                  :style="{ backgroundColor: child.color || s.color || '#64748b' }" />
+                            <span class="flex-1 truncate">{{ child.name }}</span>
+                            <span v-if="child.open_tickets > 0"
+                                  class="ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none"
+                                  :class="currentSector?.id === child.id ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'">
+                                {{ child.open_tickets }}
+                            </span>
+                        </button>
+                    </template>
 
                     <div v-if="!sectors.length"
                          class="px-3 py-4 text-[12px] text-muted-foreground text-center">
@@ -322,7 +361,7 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <Badge :variant="statusVariant">{{ store.active.status }}</Badge>
+                            <Badge :variant="statusVariant">{{ statusLabel }}</Badge>
                         </div>
                     </header>
 

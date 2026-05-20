@@ -3,7 +3,8 @@
 namespace App\Events;
 
 use App\Domain\Message\Models\Message;
-use Illuminate\Broadcasting\Channel;
+use App\Http\Resources\MessageResource;
+use App\Http\Resources\TicketResource;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -28,13 +29,11 @@ class MessageReceived implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
+        $ticket = $this->message->ticket()->with(['sector', 'assignee', 'client'])->first();
+
         return [
-            'id'        => $this->message->id,
-            'ticket_id' => $this->message->ticket_id,
-            'direction' => $this->message->direction,
-            'type'      => $this->message->type,
-            'body'      => $this->message->body,
-            'created_at'=> $this->message->created_at?->toIso8601String(),
+            'message' => (new MessageResource($this->message))->resolve(),
+            'ticket'  => $ticket ? (new TicketResource($ticket))->resolve() : null,
         ];
     }
 }

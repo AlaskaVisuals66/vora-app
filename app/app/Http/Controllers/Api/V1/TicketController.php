@@ -35,7 +35,14 @@ class TicketController extends Controller
 
         if ($request->filled('status'))    $query->where('status', $request->get('status'));
         else                                $query->whereNotIn('status', ['closed']);
-        if ($request->filled('sector_id')) $query->where('sector_id', (int) $request->get('sector_id'));
+        if ($request->filled('sector_id')) {
+            $sectorId = (int) $request->get('sector_id');
+            $childIds = Sector::where('tenant_id', $user->tenant_id)
+                ->where('parent_id', $sectorId)
+                ->pluck('id')
+                ->all();
+            $query->whereIn('sector_id', array_merge([$sectorId], $childIds));
+        }
         if ($request->filled('search')) {
             $term = '%'.$request->get('search').'%';
             $query->whereHas('client', fn ($q) => $q->where('name','ilike',$term)->orWhere('phone','ilike',$term));

@@ -21,6 +21,11 @@ const statusVariant = computed(() => ({
     queued: 'secondary', open: 'default', pending: 'default',
     resolved: 'outline', closed: 'outline', menu: 'default',
 }[props.ticket?.status] || 'outline'));
+
+const statusLabel = computed(() => ({
+    queued: 'Em fila', open: 'Atendendo', pending: 'Aguardando',
+    resolved: 'Resolvido', closed: 'Encerrado', menu: 'Menu',
+}[props.ticket?.status] || props.ticket?.status));
 </script>
 
 <template>
@@ -52,7 +57,7 @@ const statusVariant = computed(() => ({
                     <UserCheck class="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div class="min-w-0">
                         <div class="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground font-medium mb-1">Status</div>
-                        <Badge :variant="statusVariant">{{ ticket.status }}</Badge>
+                        <Badge :variant="statusVariant">{{ statusLabel }}</Badge>
                     </div>
                 </div>
 

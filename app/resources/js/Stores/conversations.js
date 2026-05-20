@@ -51,18 +51,21 @@ export const useConversationsStore = defineStore('conversations', {
         },
 
         pushIncomingMessage(msg) {
+            if (!msg || !msg.id) return;
             if (this.active && msg.ticket_id === this.active.id) {
                 if (!this.messages.some((m) => m.id === msg.id)) {
                     this.messages.push(msg);
                 }
             }
             const t = this.tickets.find((t) => t.id === msg.ticket_id);
-            if (t) t.last_message_at = msg.created_at;
+            if (t) t.last_message_at = msg.timestamp || msg.sent_at || msg.delivered_at || msg.created_at;
         },
 
         upsertTicket(ticket) {
+            if (!ticket || !ticket.id) return;
             const sectorFilter = this.filters.sector_id;
-            const matchesSector = !sectorFilter || ticket.sector_id === sectorFilter || ticket.sector?.id === sectorFilter;
+            const ticketSectorId = ticket.sector_id ?? ticket.sector?.id ?? null;
+            const matchesSector = !sectorFilter || ticketSectorId === sectorFilter;
             const idx = this.tickets.findIndex((t) => t.id === ticket.id);
             if (idx >= 0) {
                 if (!matchesSector) { this.tickets.splice(idx, 1); return; }

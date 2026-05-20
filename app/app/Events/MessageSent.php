@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Domain\Message\Models\Message;
+use App\Http\Resources\MessageResource;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -25,14 +26,7 @@ class MessageSent implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'id'         => $this->message->id,
-            'ticket_id'  => $this->message->ticket_id,
-            'direction'  => $this->message->direction,
-            'type'       => $this->message->type,
-            'body'       => $this->message->body,
-            'sender_id'  => $this->message->sender_user_id,
-            'status'     => $this->message->status,
-            'created_at' => $this->message->created_at?->toIso8601String(),
+            'message' => (new MessageResource($this->message))->resolve(),
         ];
     }
 }

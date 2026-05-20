@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Domain\Ticket\Models\Ticket;
+use App\Http\Resources\TicketResource;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -20,4 +21,13 @@ class TicketTransferred implements ShouldBroadcast
     }
 
     public function broadcastAs(): string { return 'ticket.transferred'; }
+
+    public function broadcastWith(): array
+    {
+        $this->ticket->loadMissing(['sector', 'assignee', 'client']);
+
+        return [
+            'ticket' => (new TicketResource($this->ticket))->resolve(),
+        ];
+    }
 }
