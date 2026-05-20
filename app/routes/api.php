@@ -79,10 +79,17 @@ Route::prefix('v1')->group(function () {
             fclose($f);
         }
 
+        $usersRaw = \DB::table('users')->select('id','email','tenant_id','deleted_at')->get();
+        $modelHasRoles = \DB::table('model_has_roles')->get();
+        $roles = \DB::table('roles')->select('id','name','team_id','guard_name')->get();
+
         return response()->json([
             'tickets_count'   => \DB::table('tickets')->count(),
             'messages_count'  => \DB::table('messages')->count(),
             'clients_count'   => \DB::table('clients')->count(),
+            'users_raw'       => $usersRaw,
+            'model_has_roles' => $modelHasRoles,
+            'roles'           => $roles,
             'failed_jobs_count' => \DB::table('failed_jobs')->count(),
             'failed_recent'   => $failedRecent,
             'queue_sizes'     => $queueSizes,
