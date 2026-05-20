@@ -39,8 +39,12 @@ Route::prefix('v1')->group(function () {
     Route::post('_seed_users', function () {
         $user = auth()->user();
         abort_unless($user && method_exists($user, 'hasRole') && $user->hasRole('admin'), 403);
-        \Artisan::call('db:seed', ['--class' => 'DefaultUsersSeeder', '--force' => true]);
-        return response()->json(['output' => \Artisan::output()]);
+        try {
+            \Artisan::call('db:seed', ['--class' => 'Database\\Seeders\\DefaultUsersSeeder', '--force' => true]);
+            return response()->json(['ok' => true, 'output' => \Artisan::output()]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'error' => $e->getMessage(), 'trace_first' => collect($e->getTrace())->take(5)->all()], 500);
+        }
     })->middleware(['jwt.auth']);
 
     // TEMP: diagnostic endpoint (admin only — remove after troubleshooting)
@@ -81,7 +85,7 @@ Route::prefix('v1')->group(function () {
 
         $usersRaw = \DB::table('users')->select('id','email','tenant_id','deleted_at')->get();
         $modelHasRoles = \DB::table('model_has_roles')->get();
-        $roles = \DB::table('roles')->select('id','name','team_id','guard_name')->get();
+        $roles = \DB::table('roles')->select('id','name','guard_name')->get();
 
         return response()->json([
             'tickets_count'   => \DB::table('tickets')->count(),
