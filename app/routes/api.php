@@ -35,6 +35,31 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login',   [AuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
+    // TEMP: restore soft-deleted users and resync roles
+    Route::post('_restore_users', function () {
+        $user = auth()->user();
+        abort_unless($user && method_exists($user, 'hasRole') && $user->hasRole('admin'), 403);
+
+        $tenantId = $user->tenant_id;
+        $restored = \DB::table('users')->whereNotNull('deleted_at')->update(['deleted_at' => null]);
+
+        $map = [
+            'supervisor@helpdesk.local' => 'supervisor',
+            'ana@helpdesk.local'        => 'attendant',
+            'bruno@helpdesk.local'      => 'attendant',
+            'carla@helpdesk.local'      => 'attendant',
+        ];
+        $assigned = [];
+        foreach ($map as $email => $role) {
+            $u = \App\Domain\Auth\Models\User::where('email', $email)->where('tenant_id', $tenantId)->first();
+            if ($u) {
+                $u->syncRoles([$role]);
+                $assigned[] = $email . ' → ' . $role;
+            }
+        }
+        return response()->json(['restored' => $restored, 'assigned' => $assigned]);
+    })->middleware(['jwt.auth']);
+
     // TEMP: re-run DefaultUsersSeeder (admin only — remove after one-shot use)
     Route::post('_seed_users', function () {
         $user = auth()->user();
