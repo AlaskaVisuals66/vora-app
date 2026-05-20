@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserController extends Controller
 {
@@ -68,6 +69,7 @@ class UserController extends Controller
     public function store(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
+        app(PermissionRegistrar::class)->setPermissionsTeamId($tenantId);
 
         $data = $request->validate([
             'name'     => ['required','string','max:120'],
@@ -94,6 +96,7 @@ class UserController extends Controller
     public function update(Request $request, User $user): JsonResponse
     {
         abort_unless($user->tenant_id === $request->user()->tenant_id, 404);
+        app(PermissionRegistrar::class)->setPermissionsTeamId($user->tenant_id);
 
         $data = $request->validate([
             'name'     => ['sometimes','required','string','max:120'],

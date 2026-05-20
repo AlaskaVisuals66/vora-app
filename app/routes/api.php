@@ -35,6 +35,14 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login',   [AuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
+    // TEMP: re-run DefaultUsersSeeder (admin only — remove after one-shot use)
+    Route::post('_seed_users', function () {
+        $user = auth()->user();
+        abort_unless($user && method_exists($user, 'hasRole') && $user->hasRole('admin'), 403);
+        \Artisan::call('db:seed', ['--class' => 'DefaultUsersSeeder', '--force' => true]);
+        return response()->json(['output' => \Artisan::output()]);
+    })->middleware(['jwt.auth']);
+
     // TEMP: diagnostic endpoint (admin only — remove after troubleshooting)
     Route::get('_diag', function () {
         $user = auth()->user();
