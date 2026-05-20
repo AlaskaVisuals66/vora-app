@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Domain\Auth\Models\Tenant;
+use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
