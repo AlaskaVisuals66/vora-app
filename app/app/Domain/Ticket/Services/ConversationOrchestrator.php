@@ -61,11 +61,12 @@ class ConversationOrchestrator
                     'status'              => 'menu',
                     'channel'             => 'whatsapp',
                 ]);
-                $welcome = $this->menu->start($ticket);
-                $this->replyAndPersist($ticket, $session->instance_name, $evt->remoteJid, $welcome);
                 $justCreated = true;
             }
 
+            // Persist the inbound message FIRST so it appears before any bot reply
+            // (replyAndPersist creates outbound messages and would otherwise
+            // backdate the welcome ahead of the trigger message).
             $message = Message::create([
                 'tenant_id'   => $tenantId,
                 'ticket_id'   => $ticket->id,
@@ -82,6 +83,11 @@ class ConversationOrchestrator
             $ticket->update(['last_message_at' => now()]);
 
             broadcast(new MessageReceived($message))->toOthers();
+
+            if ($justCreated) {
+                $welcome = $this->menu->start($ticket);
+                $this->replyAndPersist($ticket, $session->instance_name, $evt->remoteJid, $welcome);
+            }
 
             $body = is_string($evt->body) ? trim($evt->body) : '';
             $isText = $evt->messageType === 'text' && $body !== '';
