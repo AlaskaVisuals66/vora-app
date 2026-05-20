@@ -13,6 +13,7 @@ import axios from 'axios';
 import { UserPlus, Users as UsersIcon, Pencil, Trash2, Power } from 'lucide-vue-next';
 
 const users = ref([]);
+const sectors = ref([]);
 const loading = ref(true);
 const saving = ref(false);
 const formError = ref(null);
@@ -21,7 +22,7 @@ const dialogOpen = ref(false);
 const editing = ref(null);
 const form = reactive({
     name: '', email: '', phone: '', password: '',
-    role: 'attendant', is_active: true,
+    role: 'attendant', is_active: true, sector_ids: [],
 });
 
 const initials = (name) => (name || '?')
@@ -49,8 +50,21 @@ async function load() {
     }
 }
 
+async function loadSectors() {
+    try {
+        const { data } = await axios.get('/api/v1/sectors');
+        const flat = [];
+        const walk = (list) => list.forEach(s => {
+            flat.push({ id: s.id, name: s.name, color: s.color });
+            if (s.children?.length) walk(s.children);
+        });
+        walk(data.data || []);
+        sectors.value = flat;
+    } catch (_) {}
+}
+
 function resetForm() {
-    Object.assign(form, { name: '', email: '', phone: '', password: '', role: 'attendant', is_active: true });
+    Object.assign(form, { name: '', email: '', phone: '', password: '', role: 'attendant', is_active: true, sector_ids: [] });
     formError.value = null;
 }
 
@@ -65,12 +79,23 @@ function openEdit(u) {
     Object.assign(form, {
         name: u.name, email: u.email, phone: u.phone || '',
         password: '', role: u.role, is_active: u.is_active,
+        sector_ids: (u.sectors || []).map(s => s.id),
     });
     formError.value = null;
     dialogOpen.value = true;
 }
 
+function toggleSector(id) {
+    const i = form.sector_ids.indexOf(id);
+    if (i >= 0) form.sector_ids.splice(i, 1);
+    else form.sector_ids.push(id);
+}
+
 async function save() {
+    if (form.role === 'attendant' && form.sector_ids.length === 0) {
+        formError.value = 'Selecione pelo menos um setor para atendentes.';
+        return;
+    }
     saving.value = true;
     formError.value = null;
     try {
@@ -107,13 +132,13 @@ async function remove(u) {
     }
 }
 
-onMounted(load);
+onMounted(() => { load(); loadSectors(); });
 </script>
 
 <template>
     <Head title="Usuários — Vora" />
     <AppLayout title="Usuários">
-        <div class="px-8 py-8 max-w-[1400px] mx-auto">
+        <div class="px-4 sm:px-8 py-6 sm:py-8 max-w-[1400px] mx-auto">
                 <div class="flex justify-end pb-5">
                     <Button variant="default" @click="openCreate">
                         <UserPlus class="h-4 w-4" />
@@ -123,7 +148,8 @@ onMounted(load);
 
                 <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
                         :transition="{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }">
-                    <Card>
+                    <!-- Desktop table -->
+                    <Card class="hidden md:block">
                         <CardContent class="px-0 pb-0 pt-0">
                             <div class="overflow-x-auto">
                                 <table class="w-full text-[13px]">
@@ -131,6 +157,7 @@ onMounted(load);
                                         <tr class="border-b border-border bg-muted/40">
                                             <th class="px-6 py-3 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Nome</th>
                                             <th class="px-6 py-3 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Papel</th>
+                                            <th class="px-6 py-3 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Setores</th>
                                             <th class="px-6 py-3 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Em atendimento</th>
                                             <th class="px-6 py-3 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Resolvidos</th>
                                             <th class="px-6 py-3 text-left font-medium text-muted-foreground text-[11.5px] uppercase tracking-wider">Status</th>
@@ -158,6 +185,20 @@ onMounted(load);
                                             </td>
                                             <td class="px-6 py-3.5">
                                                 <Badge variant="outline">{{ roleLabel(u.role) }}</Badge>
+                                            </td>
+                                            <td class="px-6 py-3.5">
+                                                <div class="flex flex-wrap gap-1">
+                                                    <span v-for="s in (u.sectors || []).slice(0, 2)" :key="s.id"
+                                                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border text-[11px] text-foreground bg-card">
+                                                        <span class="h-1.5 w-1.5 rounded-full" :style="{ backgroundColor: s.color }"></span>
+                                                        {{ s.name }}
+                                                    </span>
+                                                    <span v-if="(u.sectors || []).length > 2"
+                                                          class="inline-flex items-center px-2 py-0.5 rounded-full border border-border text-[11px] text-muted-foreground">
+                                                        +{{ u.sectors.length - 2 }}
+                                                    </span>
+                                                    <span v-if="!(u.sectors || []).length" class="text-[12px] text-muted-foreground">—</span>
+                                                </div>
                                             </td>
                                             <td class="px-6 py-3.5 tabular-nums">{{ u.in_progress ?? 0 }}</td>
                                             <td class="px-6 py-3.5 tabular-nums">{{ u.resolved ?? 0 }}</td>
@@ -187,7 +228,7 @@ onMounted(load);
                                             </td>
                                         </tr>
                                         <tr v-if="!loading && !users.length">
-                                            <td colspan="6" class="text-center py-16">
+                                            <td colspan="7" class="text-center py-16">
                                                 <div class="flex flex-col items-center">
                                                     <div class="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-4">
                                                         <UsersIcon class="h-5 w-5 text-muted-foreground" />
@@ -202,6 +243,75 @@ onMounted(load);
                             </div>
                         </CardContent>
                     </Card>
+
+                    <!-- Mobile cards -->
+                    <div class="md:hidden space-y-2.5">
+                        <Card v-for="u in users" :key="u.id"
+                              :class="{ 'opacity-60': !u.is_active }">
+                            <CardContent class="p-4 space-y-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <Avatar><AvatarFallback>{{ initials(u.name) }}</AvatarFallback></Avatar>
+                                        <div class="min-w-0">
+                                            <div class="font-medium text-foreground truncate flex items-center gap-2">
+                                                {{ u.name }}
+                                                <span v-if="!u.is_active"
+                                                      class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                                    Inativo
+                                                </span>
+                                            </div>
+                                            <div class="text-[11.5px] text-muted-foreground truncate">{{ u.email }}</div>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" class="shrink-0">{{ roleLabel(u.role) }}</Badge>
+                                </div>
+
+                                <div v-if="(u.sectors || []).length" class="flex flex-wrap gap-1">
+                                    <span v-for="s in u.sectors" :key="s.id"
+                                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border text-[11px] text-foreground bg-card">
+                                        <span class="h-1.5 w-1.5 rounded-full" :style="{ backgroundColor: s.color }"></span>
+                                        {{ s.name }}
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-1 text-[12px] text-muted-foreground">
+                                    <div class="flex items-center gap-4 tabular-nums">
+                                        <span>Atend.: <span class="text-foreground font-medium">{{ u.in_progress ?? 0 }}</span></span>
+                                        <span>Resolv.: <span class="text-foreground font-medium">{{ u.resolved ?? 0 }}</span></span>
+                                    </div>
+                                    <div class="inline-flex items-center gap-0.5">
+                                        <button type="button" @click="openEdit(u)"
+                                                aria-label="Editar"
+                                                class="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                            <Pencil class="h-3.5 w-3.5" />
+                                        </button>
+                                        <button type="button" @click="toggleActive(u)"
+                                                :aria-label="u.is_active ? 'Desativar' : 'Reativar'"
+                                                class="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                            <Power class="h-3.5 w-3.5" />
+                                        </button>
+                                        <button type="button" @click="remove(u)"
+                                                aria-label="Remover"
+                                                class="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card v-if="!loading && !users.length">
+                            <CardContent class="text-center py-16">
+                                <div class="flex flex-col items-center">
+                                    <div class="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                                        <UsersIcon class="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <h3 class="text-[15px] font-semibold text-foreground">Nenhum usuário cadastrado</h3>
+                                    <p class="text-[13px] text-muted-foreground mt-1">Convide sua equipe para começar a atender.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </Motion>
         </div>
 
@@ -237,6 +347,31 @@ onMounted(load);
                                 class="flex h-9 w-full rounded-md border border-border bg-card px-3 py-1 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring transition-colors">
                             <option v-for="r in roleOptions" :key="r.value" :value="r.value">{{ r.label }}</option>
                         </select>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[12px] font-medium text-foreground">
+                        Setores
+                        <span v-if="form.role === 'attendant'" class="text-destructive">*</span>
+                        <span v-else class="text-muted-foreground font-normal">(opcional)</span>
+                    </label>
+                    <div v-if="sectors.length === 0" class="text-[12px] text-muted-foreground">
+                        Nenhum setor cadastrado.
+                    </div>
+                    <div v-else class="flex flex-wrap gap-1.5">
+                        <button
+                            v-for="s in sectors"
+                            :key="s.id"
+                            type="button"
+                            @click="toggleSector(s.id)"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[12px] transition-colors"
+                            :class="form.sector_ids.includes(s.id)
+                                ? 'border-primary bg-primary/10 text-foreground'
+                                : 'border-border bg-card text-muted-foreground hover:bg-muted'">
+                            <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: s.color }"></span>
+                            {{ s.name }}
+                        </button>
                     </div>
                 </div>
 

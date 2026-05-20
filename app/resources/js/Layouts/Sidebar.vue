@@ -30,7 +30,7 @@ function isActive(href) {
 <template>
     <aside
         class="fixed inset-y-0 left-0 z-40 flex h-screen w-60 shrink-0 transform flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out md:relative md:translate-x-0"
-        :class="sidebarOpen?.value ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
+        :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
     >
         <!-- Logo -->
         <div class="flex h-[76px] shrink-0 items-center px-3 pt-4 pb-3">
