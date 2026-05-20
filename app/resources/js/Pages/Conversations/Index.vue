@@ -13,7 +13,7 @@ import { Textarea } from '@/Components/ui/textarea';
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
-import { Search, Send, MessagesSquare, Paperclip, Smile, Inbox, SlidersHorizontal, Check } from 'lucide-vue-next';
+import { Search, Send, MessagesSquare, Paperclip, Smile, Inbox, SlidersHorizontal, Check, ArrowLeft } from 'lucide-vue-next';
 import axios from 'axios';
 
 const props = defineProps({
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
         <div class="flex h-full overflow-hidden">
 
             <!-- Coluna de setores -->
-            <aside class="flex w-[200px] shrink-0 flex-col border-r border-border bg-card">
+            <aside class="hidden md:flex md:w-[200px] shrink-0 flex-col border-r border-border bg-card">
                 <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
                     <!-- Todos -->
                     <button
@@ -225,7 +225,10 @@ onBeforeUnmount(() => {
             </aside>
 
             <!-- Lista de tickets -->
-            <section class="w-[300px] shrink-0 border-r border-border bg-card flex flex-col">
+            <section
+                class="shrink-0 border-r border-border bg-card flex flex-col w-full md:w-[300px]"
+                :class="store.active ? 'hidden md:flex' : 'flex'"
+            >
                 <div class="px-4 pt-4 pb-3 border-b border-border">
                     <h2 class="text-[14px] font-semibold text-foreground mb-3">
                         {{ currentSector ? currentSector.name : 'Todas as conversas' }}
@@ -292,10 +295,22 @@ onBeforeUnmount(() => {
             </section>
 
             <!-- Chat -->
-            <section class="flex-1 flex flex-col bg-background min-w-0">
+            <section
+                class="flex-1 flex-col bg-background min-w-0"
+                :class="store.active ? 'flex' : 'hidden md:flex'"
+            >
                 <template v-if="store.active">
-                    <header class="bg-card border-b border-border px-6 py-3 flex items-center justify-between shrink-0">
+                    <header class="bg-card border-b border-border px-4 md:px-6 py-3 flex items-center justify-between shrink-0">
                         <div class="flex items-center gap-3 min-w-0">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="md:hidden -ml-1 h-8 w-8"
+                                aria-label="Voltar"
+                                @click="store.active = null"
+                            >
+                                <ArrowLeft class="h-4 w-4" />
+                            </Button>
                             <Avatar><AvatarFallback>{{ initials(store.active.client?.name || store.active.client?.phone) }}</AvatarFallback></Avatar>
                             <div class="min-w-0">
                                 <div class="font-semibold text-foreground text-[14px] truncate">
