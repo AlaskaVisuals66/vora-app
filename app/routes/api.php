@@ -35,29 +35,23 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login',   [AuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
 
-    // TEMP: restore soft-deleted users and resync roles
-    Route::post('_restore_users', function () {
+    // TEMP: assign attendants to all sectors and mark them active
+    Route::post('_assign_sectors', function () {
         $user = auth()->user();
         abort_unless($user && method_exists($user, 'hasRole') && $user->hasRole('admin'), 403);
 
         $tenantId = $user->tenant_id;
-        $restored = \DB::table('users')->whereNotNull('deleted_at')->update(['deleted_at' => null]);
+        $sectorIds = \DB::table('sectors')->where('tenant_id', $tenantId)->pluck('id')->all();
+        $attendants = \App\Domain\Auth\Models\User::where('tenant_id', $tenantId)->get()
+            ->filter(fn($u) => $u->hasRole('attendant') || $u->hasRole('supervisor'));
 
-        $map = [
-            'supervisor@helpdesk.local' => 'supervisor',
-            'ana@helpdesk.local'        => 'attendant',
-            'bruno@helpdesk.local'      => 'attendant',
-            'carla@helpdesk.local'      => 'attendant',
-        ];
-        $assigned = [];
-        foreach ($map as $email => $role) {
-            $u = \App\Domain\Auth\Models\User::where('email', $email)->where('tenant_id', $tenantId)->first();
-            if ($u) {
-                $u->syncRoles([$role]);
-                $assigned[] = $email . ' → ' . $role;
-            }
+        $done = [];
+        foreach ($attendants as $u) {
+            $u->sectors()->syncWithoutDetaching($sectorIds);
+            \DB::table('users')->where('id', $u->id)->update(['is_active' => true, 'status' => 'online']);
+            $done[] = $u->email . ' → ' . implode(',', $sectorIds);
         }
-        return response()->json(['restored' => $restored, 'assigned' => $assigned]);
+        return response()->json(['attendants_configured' => $done]);
     })->middleware(['jwt.auth']);
 
     // TEMP: re-run DefaultUsersSeeder (admin only — remove after one-shot use)
