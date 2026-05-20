@@ -27,7 +27,7 @@ class Sector extends Model
 
     public function parent(): BelongsTo   { return $this->belongsTo(Sector::class, 'parent_id'); }
     public function children(): HasMany   { return $this->hasMany(Sector::class, 'parent_id')->orderBy('order'); }
-    public function attendants(): BelongsToMany { return $this->belongsToMany(User::class, 'attendant_sectors')->withPivot(['is_default','priority'])->withTimestamps(); }
+    public function attendants(): BelongsToMany { return $this->belongsToMany(User::class, 'attendant_sectors')->withTimestamps(); }
 
     public function isLeaf(): bool { return $this->children()->count() === 0; }
 }

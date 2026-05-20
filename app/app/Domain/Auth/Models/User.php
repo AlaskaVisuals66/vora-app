@@ -48,7 +48,7 @@ class User extends Authenticatable implements JWTSubject
     }
 
     public function tenant(): BelongsTo  { return $this->belongsTo(Tenant::class); }
-    public function sectors(): BelongsToMany { return $this->belongsToMany(Sector::class, 'attendant_sectors')->withPivot(['is_default','priority'])->withTimestamps(); }
+    public function sectors(): BelongsToMany { return $this->belongsToMany(Sector::class, 'attendant_sectors')->withTimestamps(); }
     public function tickets(): HasMany   { return $this->hasMany(Ticket::class, 'assigned_to'); }
     public function presence(): HasOne   { return $this->hasOne(\App\Domain\Auth\Models\OnlineStatus::class); }
 
