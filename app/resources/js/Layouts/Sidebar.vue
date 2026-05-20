@@ -1,4 +1,5 @@
 <script setup>
+import { inject } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutDashboard, MessagesSquare, Users, Building2, Settings, FlaskConical,
@@ -6,6 +7,8 @@ import {
 
 const isDev = import.meta.env.DEV;
 const page  = usePage();
+const sidebarOpen = inject('sidebarOpen', null);
+const closeSidebar = inject('closeSidebar', () => {});
 
 const nav = [
     { label: 'Início',        icon: LayoutDashboard, href: '/dashboard' },
@@ -25,7 +28,10 @@ function isActive(href) {
 </script>
 
 <template>
-    <aside class="flex h-screen w-60 shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground">
+    <aside
+        class="fixed inset-y-0 left-0 z-40 flex h-screen w-60 shrink-0 transform flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition-transform duration-200 ease-out md:relative md:translate-x-0"
+        :class="sidebarOpen?.value ? 'translate-x-0 shadow-2xl' : '-translate-x-full'"
+    >
         <!-- Logo -->
         <div class="flex h-[76px] shrink-0 items-center px-3 pt-4 pb-3">
             <img src="/images/logo.png" alt="Vora"
@@ -43,6 +49,7 @@ function isActive(href) {
                 :class="isActive(item.href)
                     ? 'bg-[#EF351A] text-white font-semibold'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'"
+                @click="closeSidebar"
             >
                 <component :is="item.icon" class="h-[18px] w-[18px] shrink-0" />
                 <span class="truncate">{{ item.label }}</span>
@@ -61,6 +68,7 @@ function isActive(href) {
                     :class="isActive(item.href)
                         ? 'bg-[#EF351A] text-white font-semibold'
                         : 'text-sidebar-muted hover:bg-sidebar-accent hover:text-white'"
+                    @click="closeSidebar"
                 >
                     <component :is="item.icon" class="h-[15px] w-[15px] shrink-0" />
                     <span class="truncate">{{ item.label }}</span>

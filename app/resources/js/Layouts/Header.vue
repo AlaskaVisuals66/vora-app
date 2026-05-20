@@ -1,9 +1,9 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, inject } from 'vue';
 import { router } from '@inertiajs/vue3';
 import {
     Search, Bell, LayoutDashboard, MessagesSquare, Building2, Users, Settings,
-    User as UserIcon,
+    User as UserIcon, Menu,
 } from 'lucide-vue-next';
 import { Button } from '@/Components/ui/button';
 import {
@@ -20,6 +20,7 @@ defineProps({
 });
 
 const searchOpen = ref(false);
+const toggleSidebar = inject('toggleSidebar', () => {});
 
 const navItems = [
     { label: 'Início',        icon: LayoutDashboard, href: '/dashboard' },
@@ -48,7 +49,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
 <template>
     <header class="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-5">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+            <Button
+                variant="ghost"
+                size="icon"
+                class="md:hidden"
+                aria-label="Abrir menu"
+                @click="toggleSidebar"
+            >
+                <Menu class="h-5 w-5" />
+            </Button>
             <h2 v-if="title" class="text-[14px] font-semibold tracking-tight text-foreground">{{ title }}</h2>
         </div>
         <div class="flex items-center gap-1">
