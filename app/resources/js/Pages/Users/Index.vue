@@ -115,7 +115,7 @@ onMounted(load);
     <AppLayout title="Usuários">
         <div class="px-8 py-8 max-w-[1400px] mx-auto">
                 <div class="flex justify-end pb-5">
-                    <Button variant="outline" @click="openCreate">
+                    <Button variant="default" @click="openCreate">
                         <UserPlus class="h-4 w-4" />
                         Convidar usuário
                     </Button>
@@ -253,7 +253,7 @@ onMounted(load);
 
                 <div class="flex justify-end gap-2 pt-2 border-t border-border -mx-5 px-5 mt-5 pt-4">
                     <Button type="button" variant="ghost" @click="dialogOpen = false">Cancelar</Button>
-                    <Button type="submit" variant="outline" :disabled="saving">
+                    <Button type="submit" variant="default" :disabled="saving">
                         {{ editing ? 'Salvar' : 'Criar usuário' }}
                     </Button>
                 </div>

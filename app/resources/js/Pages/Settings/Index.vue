@@ -322,12 +322,12 @@ onBeforeUnmount(stopQrPolling);
     <AppLayout>
         <div class="mx-auto max-w-5xl px-8 py-8 space-y-6">
 
-            <PageHeader title="Configurações" description="Empresa, sessões WhatsApp e integrações" />
+            <PageHeader title="Configurações" description="Dados da empresa" />
 
             <Motion :initial="{ opacity: 0, y: 12 }" :animate="{ opacity: 1, y: 0 }"
                     :transition="{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }">
                 <Tabs default-value="company">
-                    <TabsList>
+                    <TabsList class="hidden">
                         <TabsTrigger value="company">Empresa</TabsTrigger>
                         <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
                         <TabsTrigger value="integrations">Integrações</TabsTrigger>
