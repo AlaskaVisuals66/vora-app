@@ -24,7 +24,7 @@ class UserController extends Controller
         $base = User::query()
             ->where('tenant_id', $tenantId)
             ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'superadmin'))
-            ->with('roles:id,name')
+            ->with(['roles:id,name', 'sectors:id,name,color'])
             ->orderBy('name');
 
         if ($me->hasRole('attendant') || $me->hasRole('supervisor')) {
@@ -62,6 +62,11 @@ class UserController extends Controller
                 'in_progress' => (int) ($inProgress[$u->id] ?? 0),
                 'resolved'    => (int) ($resolved[$u->id] ?? 0),
                 'status'      => ($u->last_seen_at && $u->last_seen_at->gte($threshold)) ? 'online' : 'offline',
+                'sectors'     => $u->sectors->map(fn($s) => [
+                    'id'    => $s->id,
+                    'name'  => $s->name,
+                    'color' => $s->color,
+                ])->values(),
             ])->values(),
         ]);
     }
@@ -72,12 +77,20 @@ class UserController extends Controller
         app(PermissionRegistrar::class)->setPermissionsTeamId($tenantId);
 
         $data = $request->validate([
-            'name'     => ['required','string','max:120'],
-            'email'    => ['required','email','max:160', Rule::unique('users','email')->whereNull('deleted_at')],
-            'phone'    => ['nullable','string','max:32'],
-            'password' => ['required','string','min:8'],
-            'role'     => ['required', Rule::in(['admin','supervisor','attendant'])],
-            'is_active'=> ['boolean'],
+            'name'         => ['required','string','max:120'],
+            'email'        => ['required','email','max:160', Rule::unique('users','email')->whereNull('deleted_at')],
+            'phone'        => ['nullable','string','max:32'],
+            'password'     => ['required','string','min:8'],
+            'role'         => ['required', Rule::in(['admin','supervisor','attendant'])],
+            'is_active'    => ['boolean'],
+            'sector_ids'   => [
+                Rule::requiredIf(fn () => $request->input('role') === 'attendant'),
+                'array',
+            ],
+            'sector_ids.*' => [
+                'integer',
+                Rule::exists('sectors','id')->where('tenant_id', $tenantId),
+            ],
         ]);
 
         $user = User::create([
@@ -90,6 +103,10 @@ class UserController extends Controller
         ]);
         $user->syncRoles([$data['role']]);
 
+        if (array_key_exists('sector_ids', $data)) {
+            $user->sectors()->sync($data['sector_ids']);
+        }
+
         return response()->json(['data' => $this->present($user)], 201);
     }
 
@@ -98,13 +115,25 @@ class UserController extends Controller
         abort_unless($user->tenant_id === $request->user()->tenant_id, 404);
         app(PermissionRegistrar::class)->setPermissionsTeamId($user->tenant_id);
 
+        $tenantId      = $user->tenant_id;
+        $effectiveRole = $request->input('role') ?? optional($user->roles->first())->name;
+
         $data = $request->validate([
-            'name'     => ['sometimes','required','string','max:120'],
-            'email'    => ['sometimes','required','email','max:160', Rule::unique('users','email')->ignore($user->id)->whereNull('deleted_at')],
-            'phone'    => ['nullable','string','max:32'],
-            'password' => ['nullable','string','min:8'],
-            'role'     => ['sometimes','required', Rule::in(['admin','supervisor','attendant'])],
-            'is_active'=> ['boolean'],
+            'name'         => ['sometimes','required','string','max:120'],
+            'email'        => ['sometimes','required','email','max:160', Rule::unique('users','email')->ignore($user->id)->whereNull('deleted_at')],
+            'phone'        => ['nullable','string','max:32'],
+            'password'     => ['nullable','string','min:8'],
+            'role'         => ['sometimes','required', Rule::in(['admin','supervisor','attendant'])],
+            'is_active'    => ['boolean'],
+            'sector_ids'   => [
+                'sometimes',
+                Rule::requiredIf(fn () => $effectiveRole === 'attendant' && $request->has('sector_ids')),
+                'array',
+            ],
+            'sector_ids.*' => [
+                'integer',
+                Rule::exists('sectors','id')->where('tenant_id', $tenantId),
+            ],
         ]);
 
         if (! empty($data['password'])) {
@@ -115,8 +144,15 @@ class UserController extends Controller
         $role = $data['role'] ?? null;
         unset($data['role']);
 
+        $sectorIds = null;
+        if (array_key_exists('sector_ids', $data)) {
+            $sectorIds = $data['sector_ids'];
+            unset($data['sector_ids']);
+        }
+
         $user->fill($data)->save();
         if ($role) $user->syncRoles([$role]);
+        if ($sectorIds !== null) $user->sectors()->sync($sectorIds);
 
         return response()->json(['data' => $this->present($user->fresh('roles'))]);
     }
@@ -132,7 +168,7 @@ class UserController extends Controller
 
     private function present(User $user): array
     {
-        $user->loadMissing('roles:id,name');
+        $user->loadMissing(['roles:id,name', 'sectors:id,name,color']);
         return [
             'id'        => $user->id,
             'name'      => $user->name,
@@ -141,6 +177,11 @@ class UserController extends Controller
             'is_active' => (bool) $user->is_active,
             'role'      => optional($user->roles->first())->name ?? 'attendant',
             'status'    => 'offline',
+            'sectors'   => $user->sectors->map(fn($s) => [
+                'id'    => $s->id,
+                'name'  => $s->name,
+                'color' => $s->color,
+            ])->values(),
         ];
     }
 }
