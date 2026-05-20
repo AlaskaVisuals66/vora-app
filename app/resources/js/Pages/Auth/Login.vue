@@ -34,9 +34,8 @@ async function submit() {
                 :transition="{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }">
             <!-- Brand mark above card -->
             <div class="text-center mb-8">
-                <img src="/images/logo.png" alt="Vora" class="h-12 w-auto object-contain mx-auto mb-5" />
-                <h1 class="text-[22px] font-semibold text-white tracking-tight">Bem-vindo de volta</h1>
-                <p class="text-[13px] text-white/60 mt-1.5">Acesse sua central de atendimento Vora</p>
+                <img src="/images/logo.png" alt="Vora" class="h-28 w-auto object-contain mx-auto mb-3" />
+                <p class="text-[13px] text-white/60">Acesse sua central de atendimento Vora</p>
             </div>
 
             <div class="rounded-xl bg-card border border-white/10 shadow-2xl p-7">
@@ -51,10 +50,7 @@ async function submit() {
                     </div>
 
                     <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[12.5px] font-medium text-foreground">Senha</label>
-                            <a href="#" class="text-[11.5px] text-primary hover:underline">Esqueceu?</a>
-                        </div>
+                        <label class="text-[12.5px] font-medium text-foreground">Senha</label>
                         <div class="relative">
                             <Lock class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input v-model="form.password" type="password" required
