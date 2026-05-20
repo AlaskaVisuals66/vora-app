@@ -55,9 +55,11 @@ class TicketController extends Controller
     {
         $this->authorizeTicket($request->user(), $ticket);
 
+        // Chronological order: outbound uses sent_at, inbound uses delivered_at.
+        // Falling back to id (auto-increment) preserves arrival order when timestamps tie.
         $messages = $ticket->messages()
             ->with(['attachments','sender:id,name'])
-            ->orderBy('sent_at')
+            ->orderByRaw('COALESCE(sent_at, delivered_at, created_at) ASC')
             ->orderBy('id')
             ->paginate(50);
 

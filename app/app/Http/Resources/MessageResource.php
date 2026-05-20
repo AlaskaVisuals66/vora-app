@@ -9,18 +9,22 @@ class MessageResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $effectiveAt = $this->sent_at ?? $this->delivered_at ?? $this->created_at;
+
         return [
-            'id'         => $this->id,
-            'ticket_id'  => $this->ticket_id,
-            'direction'  => $this->direction,
-            'type'       => $this->type,
-            'body'       => $this->body,
-            'media'      => $this->media,
-            'status'     => $this->status,
-            'sender'     => $this->whenLoaded('sender'),
-            'attachments'=> AttachmentResource::collection($this->whenLoaded('attachments')),
-            'sent_at'    => $this->sent_at?->toIso8601String(),
-            'created_at' => $this->created_at?->toIso8601String(),
+            'id'           => $this->id,
+            'ticket_id'    => $this->ticket_id,
+            'direction'    => $this->direction,
+            'type'         => $this->type,
+            'body'         => $this->body,
+            'media'        => $this->media,
+            'status'       => $this->status,
+            'sender'       => $this->whenLoaded('sender'),
+            'attachments'  => AttachmentResource::collection($this->whenLoaded('attachments')),
+            'sent_at'      => $this->sent_at?->toIso8601String(),
+            'delivered_at' => $this->delivered_at?->toIso8601String(),
+            'timestamp'    => $effectiveAt?->toIso8601String(),
+            'created_at'   => $this->created_at?->toIso8601String(),
         ];
     }
 }
