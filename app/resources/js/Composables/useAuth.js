@@ -1,28 +1,21 @@
 import { computed } from 'vue';
-import { usePage, router } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 
-const DEV_AUTOLOGIN = { email: 'admin@helpdesk.local', password: 'password' };
-
-export async function ensureAutoLogin() {
-    const existing = localStorage.getItem('helpdesk.jwt');
-    if (existing) {
-        try {
-            const { data } = await axios.get('/api/v1/auth/me', {
-                headers: { Authorization: `Bearer ${existing}` },
-            });
-            localStorage.setItem('helpdesk.user', JSON.stringify(data.user || {}));
-            return;
-        } catch (_) {
-            localStorage.removeItem('helpdesk.jwt');
-            localStorage.removeItem('helpdesk.user');
-        }
-    }
+export async function ensureSession() {
+    const token = localStorage.getItem('helpdesk.jwt');
+    if (!token) return false;
     try {
-        const { data } = await axios.post('/api/v1/auth/login', DEV_AUTOLOGIN);
-        localStorage.setItem('helpdesk.jwt', data.access_token || data.token);
+        const { data } = await axios.get('/api/v1/auth/me', {
+            headers: { Authorization: `Bearer ${token}` },
+        });
         localStorage.setItem('helpdesk.user', JSON.stringify(data.user || {}));
-    } catch (_) {}
+        return true;
+    } catch (_) {
+        localStorage.removeItem('helpdesk.jwt');
+        localStorage.removeItem('helpdesk.user');
+        return false;
+    }
 }
 
 export function useAuth() {
@@ -49,7 +42,7 @@ export function useAuth() {
         try { await axios.post('/api/v1/auth/logout'); } catch (_) {}
         localStorage.removeItem('helpdesk.jwt');
         localStorage.removeItem('helpdesk.user');
-        window.location.href = '/conversations';
+        window.location.href = '/login';
     }
 
     return { user, hasRole, isAdmin, isSupervisor, isAttendant, login, logout };
