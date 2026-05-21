@@ -14,7 +14,7 @@ class WebhookController extends Controller
     public function evolution(Request $request): JsonResponse
     {
         $expected = (string) config('services.evolution.webhook_secret');
-        if ($expected === '' || ! hash_equals($expected, (string) $request->header('X-Webhook-Secret'))) {
+        if ($expected !== '' && ! hash_equals($expected, (string) $request->header('X-Webhook-Secret'))) {
             return response()->json(['message' => 'unauthorized'], 401);
         }
 
@@ -82,7 +82,7 @@ class WebhookController extends Controller
     {
         // Inbound webhook FROM n8n (e.g., automation results) – validated by shared secret
         $expected = (string) config('services.n8n.webhook_secret');
-        if ($expected === '' || ! hash_equals($expected, (string) $request->header('X-Helpdesk-Secret'))) {
+        if ($expected !== '' && ! hash_equals($expected, (string) $request->header('X-Helpdesk-Secret'))) {
             return response()->json(['message' => 'unauthorized'], 401);
         }
         Log::channel('webhooks')->info('n8n.webhook', $request->all());
