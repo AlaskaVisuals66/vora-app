@@ -13,7 +13,7 @@ const sidebarOpen = inject('sidebarOpen', null);
 const closeSidebar = inject('closeSidebar', () => {});
 
 const allNav = [
-    { label: 'Início',        icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Início',        icon: LayoutDashboard, href: '/dashboard',   adminOnly: true },
     { label: 'Conversas',     icon: MessagesSquare,  href: '/conversations' },
     { label: 'Setores',       icon: Building2,       href: '/sectors',     adminOnly: true },
     { label: 'Usuários',      icon: Users,           href: '/users',       adminOnly: true },
