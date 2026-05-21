@@ -4,6 +4,7 @@ namespace App\Domain\Ticket\Services;
 
 use App\Domain\Client\Models\Client;
 use App\Domain\Message\Models\Message;
+use App\Domain\Tenancy\Models\Tenant;
 use App\Domain\Ticket\Models\Ticket;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Events\MessageReceived;
@@ -37,7 +38,22 @@ class ConversationOrchestrator
     {
         if ($evt->fromMe || ! $evt->fromNumber) return;
 
-        $session = WhatsappSession::where('instance_name', $evt->instance)->firstOrFail();
+        $session = WhatsappSession::where('instance_name', $evt->instance)->first();
+        if (! $session) {
+            $tenant = Tenant::first();
+            if (! $tenant) {
+                \Log::channel('webhooks')->error('orchestrator.no_tenant', ['instance' => $evt->instance]);
+                return;
+            }
+            $session = WhatsappSession::create([
+                'tenant_id'    => $tenant->id,
+                'instance_name'=> $evt->instance,
+                'display_name' => $evt->instance,
+                'state'        => 'connected',
+                'is_primary'   => ! WhatsappSession::where('tenant_id', $tenant->id)->where('is_primary', true)->exists(),
+            ]);
+            \Log::channel('webhooks')->info('orchestrator.session_autocreated', ['instance' => $evt->instance, 'session_id' => $session->id]);
+        }
         $tenantId = $session->tenant_id;
         app()->instance('tenant.id', $tenantId);
 
