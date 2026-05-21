@@ -12,6 +12,16 @@ import { initTheme } from './Composables/useTheme';
 const appName = import.meta.env.VITE_APP_NAME || 'Vora';
 
 const PUBLIC_PATHS = ['/login'];
+const ADMIN_ONLY_PATHS = ['/dashboard', '/sectors', '/users', '/settings'];
+
+function currentUserRoles() {
+    try {
+        const u = JSON.parse(localStorage.getItem('helpdesk.user') || 'null');
+        return (u?.roles || []).map((r) => (typeof r === 'string' ? r : r?.name));
+    } catch (_) {
+        return [];
+    }
+}
 
 (async () => {
     const path = window.location.pathname;
@@ -22,9 +32,17 @@ const PUBLIC_PATHS = ['/login'];
         window.location.replace('/login');
         return;
     }
-    if (hasSession && path === '/login') {
-        window.location.replace('/conversations');
-        return;
+    if (hasSession) {
+        const roles = currentUserRoles();
+        const isAdmin = roles.includes('admin');
+        if (path === '/login') {
+            window.location.replace(isAdmin ? '/dashboard' : '/conversations');
+            return;
+        }
+        if (!isAdmin && ADMIN_ONLY_PATHS.some((p) => path === p || path.startsWith(p + '/'))) {
+            window.location.replace('/conversations');
+            return;
+        }
     }
 
     initTheme();

@@ -35,7 +35,9 @@ export function useAuth() {
         const { data } = await axios.post('/api/v1/auth/login', { email, password });
         localStorage.setItem('helpdesk.jwt', data.access_token || data.token);
         localStorage.setItem('helpdesk.user', JSON.stringify(data.user || {}));
-        window.location.href = '/conversations';
+        const roles = (data.user?.roles || []).map((r) => (typeof r === 'string' ? r : r?.name));
+        const dest = roles.includes('admin') ? '/dashboard' : '/conversations';
+        window.location.href = dest;
     }
 
     async function logout() {
