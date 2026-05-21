@@ -9,6 +9,17 @@
 /app/storage/framework/views/*
 /app/.env
 /app/database/database.sqlite
+/app/_*.php
+/app/qr_helpdesk.png
+/app/test_output.log
+/app/setup_sshd*
+/app/sshd-setup*
+/app/whoami.ps1
+/app/run_elevated.ps1
+/app/start.bat
+/WHATSAPP_QR.png
+/_ui_tests/
+/app/images/
 .superpowers/
 ngrok.log
 n8n_cookies.txt

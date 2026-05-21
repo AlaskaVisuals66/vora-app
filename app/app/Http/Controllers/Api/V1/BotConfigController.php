@@ -12,6 +12,11 @@ class BotConfigController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $expected = (string) config('services.n8n.webhook_secret');
+        if ($expected === '' || ! hash_equals($expected, (string) $request->header('X-Helpdesk-Secret'))) {
+            return response()->json(['message' => 'unauthorized'], 401);
+        }
+
         $instanceName = $request->query('instance');
 
         if ($instanceName) {

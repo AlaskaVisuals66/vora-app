@@ -203,7 +203,9 @@ async function loadTenant() {
         if (data.data.integrations?.gateway) {
             gateway.value = normalizeGateway(data.data.integrations.gateway);
         }
-    } catch (_) {}
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao carregar dados da empresa.');
+    }
 }
 
 async function saveTenant() {
@@ -288,8 +290,9 @@ async function loadBot() {
     try {
         const { data } = await axios.get('/api/v1/tenant/bot');
         applyBot(data.data);
-    } catch (_) {}
-    finally { botLoading.value = false; }
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao carregar configuração do bot.');
+    } finally { botLoading.value = false; }
 }
 
 async function saveBot() {

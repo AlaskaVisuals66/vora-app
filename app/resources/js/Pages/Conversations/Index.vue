@@ -10,10 +10,13 @@ import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Textarea } from '@/Components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/Components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from '@/Components/ui/dropdown-menu';
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
-import { Search, Send, MessagesSquare, Paperclip, Smile, Inbox, SlidersHorizontal, Check, ArrowLeft } from 'lucide-vue-next';
+import { Search, Send, MessagesSquare, Inbox, SlidersHorizontal, Check, ArrowLeft, MoreVertical, X, ArrowRightLeft } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 import axios from 'axios';
 
 const props = defineProps({
@@ -32,6 +35,51 @@ const tenantChannel = ref(null);
 const ticketChannel = ref(null);
 const typingTimer = ref(null);
 const filterOpen = ref(false);
+const transferOpen = ref(false);
+const transferring = ref(false);
+const transferSectorId = ref(null);
+
+const flatSectors = computed(() => {
+    const out = [];
+    const walk = (list) => list.forEach((s) => {
+        out.push({ id: s.id, name: s.name, color: s.color });
+        if (s.children?.length) walk(s.children);
+    });
+    walk(sectors.value);
+    return out;
+});
+
+async function closeActive() {
+    if (!store.active) return;
+    if (!confirm(`Encerrar a conversa #${store.active.protocol}?`)) return;
+    try {
+        await store.closeActive();
+        toast.success('Conversa encerrada.');
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao encerrar a conversa.');
+    }
+}
+
+function openTransfer() {
+    transferSectorId.value = store.active?.sector?.id ?? null;
+    transferOpen.value = true;
+}
+
+async function submitTransfer() {
+    if (!transferSectorId.value || !store.active) return;
+    transferring.value = true;
+    try {
+        await store.transferToSector(transferSectorId.value);
+        transferOpen.value = false;
+        toast.success('Conversa transferida.');
+        await store.fetchTickets();
+        store.active = null;
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao transferir.');
+    } finally {
+        transferring.value = false;
+    }
+}
 
 const filtered = computed(() => {
     if (!store.filters.search) return store.tickets;
@@ -139,7 +187,9 @@ async function loadSectors() {
     try {
         const { data } = await axios.get('/api/v1/sectors');
         sectors.value = data.data || [];
-    } catch (_) {}
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao carregar setores.');
+    }
 }
 
 function sectorTotal(s) {
@@ -362,6 +412,24 @@ onBeforeUnmount(() => {
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
                             <Badge :variant="statusVariant">{{ statusLabel }}</Badge>
+                            <DropdownMenu v-if="store.active.status !== 'closed'">
+                                <DropdownMenuTrigger as-child>
+                                    <Button variant="ghost" size="icon" aria-label="Mais opções" class="h-8 w-8">
+                                        <MoreVertical class="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" class="w-48">
+                                    <DropdownMenuItem @click="openTransfer">
+                                        <ArrowRightLeft class="h-4 w-4" />
+                                        Transferir setor
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem @click="closeActive" class="text-destructive focus:text-destructive">
+                                        <X class="h-4 w-4" />
+                                        Encerrar conversa
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </header>
 
@@ -380,18 +448,10 @@ onBeforeUnmount(() => {
 
                     <footer class="bg-card border-t border-border px-4 py-3 shrink-0">
                         <div class="flex items-end gap-2">
-                            <Button type="button" variant="ghost" size="icon"
-                                    class="shrink-0 text-muted-foreground" tabindex="-1">
-                                <Paperclip class="h-4 w-4" />
-                            </Button>
                             <Textarea v-model="draft" @input="emitTyping"
                                       @keydown.enter.exact.prevent="send"
                                       rows="1" placeholder="Digite sua mensagem…"
                                       class="resize-none flex-1 max-h-32 min-h-[40px] py-2.5" />
-                            <Button type="button" variant="ghost" size="icon"
-                                    class="shrink-0 text-muted-foreground" tabindex="-1">
-                                <Smile class="h-4 w-4" />
-                            </Button>
                             <Button variant="default" size="icon" @click="send"
                                     :disabled="!draft.trim()" class="shrink-0">
                                 <Send class="h-4 w-4" />
@@ -415,7 +475,33 @@ onBeforeUnmount(() => {
 
             <!-- Painel cliente -->
             <ClientPanel :ticket="store.active"
-                         @close="store.closeActive()" />
+                         @close="closeActive" />
         </div>
+
+        <Dialog v-model:open="transferOpen">
+            <DialogContent class="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Transferir conversa</DialogTitle>
+                    <DialogDescription>Escolha o setor que receberá esta conversa.</DialogDescription>
+                </DialogHeader>
+                <div class="space-y-1.5 max-h-72 overflow-y-auto -mx-1 px-1">
+                    <button v-for="s in flatSectors" :key="s.id"
+                            type="button"
+                            @click="transferSectorId = s.id"
+                            class="flex w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[13px] transition-colors"
+                            :class="transferSectorId === s.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted'">
+                        <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: s.color || '#64748b' }"></span>
+                        <span class="flex-1 truncate">{{ s.name }}</span>
+                        <Check v-if="transferSectorId === s.id" class="h-3.5 w-3.5 text-primary" />
+                    </button>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" @click="transferOpen = false" :disabled="transferring">Cancelar</Button>
+                    <Button @click="submitTransfer" :disabled="!transferSectorId || transferring">
+                        {{ transferring ? 'Transferindo…' : 'Transferir' }}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

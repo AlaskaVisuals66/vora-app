@@ -16,14 +16,13 @@ Broadcast::channel('tenant.{tenantId}.sector.{sectorId}', function (User $user, 
     return $user->sectors()->whereKey($sectorId)->exists();
 });
 
-// Ticket conversation — assignee + admins + supervisors of the sector
+// Ticket conversation — admin + anyone in the ticket's sector
 Broadcast::channel('tenant.{tenantId}.ticket.{ticketId}', function (User $user, int $tenantId, int $ticketId) {
     if ($user->tenant_id !== $tenantId) return false;
     $ticket = Ticket::query()->where('tenant_id', $tenantId)->find($ticketId);
     if (! $ticket) return false;
-    return $user->isAdmin()
-        || $user->isSupervisor()
-        || $ticket->assigned_to === $user->id;
+    if ($user->isAdmin()) return true;
+    return $user->sectors()->where('sectors.id', $ticket->sector_id)->exists();
 });
 
 // Presence channel for online users dashboard

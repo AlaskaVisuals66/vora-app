@@ -87,8 +87,10 @@ export const useConversationsStore = defineStore('conversations', {
 
         async closeActive() {
             if (!this.active) return;
-            await axios.post(`/api/v1/tickets/${this.active.id}/close`);
-            this.active.status = 'closed';
+            const id = this.active.id;
+            await axios.post(`/api/v1/tickets/${id}/close`);
+            this.tickets = this.tickets.filter((t) => t.id !== id);
+            this.active = null;
         },
 
         async transferToSector(sectorId) {

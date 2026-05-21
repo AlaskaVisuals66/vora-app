@@ -28,7 +28,7 @@ class TicketController extends Controller
             ->where('tenant_id', $user->tenant_id)
             ->latest('last_message_at');
 
-        if ($user->isAttendant()) {
+        if (! $user->isAdmin()) {
             $query->whereIn('sector_id', $user->sectors()->pluck('sectors.id'));
         }
 
@@ -100,6 +100,9 @@ class TicketController extends Controller
             'reason'  => ['nullable','string','max:500'],
         ]);
         $to = User::query()->where('tenant_id', $request->user()->tenant_id)->findOrFail($data['user_id']);
+        if (! $to->isAdmin() && ! $to->sectors()->where('sectors.id', $ticket->sector_id)->exists()) {
+            return response()->json(['message' => 'O usuário escolhido não pertence ao setor deste ticket.'], 422);
+        }
         $ticket = $this->transfers->transferToUser($ticket, $to, $request->user(), $data['reason'] ?? null);
         return response()->json(['data' => new TicketResource($ticket)]);
     }
@@ -120,7 +123,7 @@ class TicketController extends Controller
     private function authorizeTicket(User $user, Ticket $ticket): void
     {
         if ($ticket->tenant_id !== $user->tenant_id) abort(403);
-        if ($user->isAdmin() || $user->isSupervisor()) return;
+        if ($user->isAdmin()) return;
         if (! in_array($ticket->sector_id, $user->sectors()->pluck('sectors.id')->all(), true)) {
             abort(403, 'Acesso negado a este ticket.');
         }

@@ -33,8 +33,8 @@ async function submit() {
         <Motion :initial="{ opacity: 0, y: 16 }" :animate="{ opacity: 1, y: 0 }"
                 :transition="{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }">
             <!-- Brand mark above card -->
-            <div class="text-center mb-8">
-                <img src="/images/logo.png" alt="Vora" class="h-28 w-auto object-contain mx-auto mb-3" />
+            <div class="text-center mb-6">
+                <img src="/images/logo.png" alt="Vora" class="h-16 sm:h-20 w-auto object-contain mx-auto mb-3" />
                 <p class="text-[13px] text-white/60">Acesse sua central de atendimento Vora</p>
             </div>
 

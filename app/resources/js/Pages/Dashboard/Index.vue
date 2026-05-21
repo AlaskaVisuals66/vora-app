@@ -12,11 +12,14 @@ import { Inbox, Headphones, CheckCircle2, Clock, Users, BarChart3 } from 'lucide
 
 const data = ref(null);
 const loading = ref(true);
+const loadError = ref(null);
 
 onMounted(async () => {
     try {
         const { data: payload } = await axios.get('/api/v1/analytics/dashboard');
         data.value = payload.data || payload;
+    } catch (e) {
+        loadError.value = e.response?.data?.message || 'Falha ao carregar o painel.';
     } finally {
         loading.value = false;
     }
@@ -64,7 +67,11 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
 <template>
     <Head title="Início — Vora" />
     <AppLayout>
-        <div class="px-8 py-8 space-y-8 max-w-[1200px] mx-auto">
+        <div class="px-4 sm:px-8 py-8 space-y-8 max-w-[1200px] mx-auto">
+
+            <div v-if="loadError" class="rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-[13px] text-destructive">
+                {{ loadError }}
+            </div>
 
             <!-- KPIs -->
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

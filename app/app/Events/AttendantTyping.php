@@ -15,6 +15,7 @@ class AttendantTyping implements ShouldBroadcastNow
         public int $ticketId,
         public int $userId,
         public bool $typing,
+        public ?string $userName = null,
     ) {}
 
     public function broadcastOn(): array
@@ -26,6 +27,10 @@ class AttendantTyping implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        return ['user_id' => $this->userId, 'typing' => $this->typing];
+        return [
+            'user_id'   => $this->userId,
+            'user_name' => $this->userName,
+            'typing'    => $this->typing,
+        ];
     }
 }

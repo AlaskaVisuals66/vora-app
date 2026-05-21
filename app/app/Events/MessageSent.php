@@ -18,7 +18,10 @@ class MessageSent implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [ new PrivateChannel("tenant.{$this->message->tenant_id}.ticket.{$this->message->ticket_id}") ];
+        return [
+            new PrivateChannel("tenant.{$this->message->tenant_id}"),
+            new PrivateChannel("tenant.{$this->message->tenant_id}.ticket.{$this->message->ticket_id}"),
+        ];
     }
 
     public function broadcastAs(): string { return 'message.sent'; }

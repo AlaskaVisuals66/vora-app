@@ -30,7 +30,7 @@ const statusLabel = computed(() => ({
 
 <template>
     <aside v-if="ticket"
-           class="hidden xl:flex w-80 border-l border-border bg-card flex-col overflow-y-auto scrollbar-thin">
+           class="hidden lg:flex w-80 border-l border-border bg-card flex-col overflow-y-auto scrollbar-thin">
         <!-- Profile header -->
         <div class="px-6 pt-8 pb-6 text-center border-b border-border">
             <Avatar class="mx-auto mb-4"><AvatarFallback>{{ initials(client.name || client.phone) }}</AvatarFallback></Avatar>

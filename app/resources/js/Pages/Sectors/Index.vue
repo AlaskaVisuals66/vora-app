@@ -12,6 +12,7 @@ import { useAuth } from '@/Composables/useAuth';
 import { onMounted, ref, reactive, computed } from 'vue';
 import axios from 'axios';
 import { Plus, Users as UsersIcon, GitBranch, Hash, Layers, Pencil, Trash2 } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 
 const { isAdmin } = useAuth();
 
@@ -34,6 +35,8 @@ async function load() {
     try {
         const { data } = await axios.get('/api/v1/sectors');
         sectors.value = data.data || [];
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao carregar setores.');
     } finally {
         loading.value = false;
     }
@@ -94,8 +97,9 @@ async function remove(s) {
     try {
         await axios.delete(`/api/v1/sectors/${s.id}`);
         await load();
+        toast.success('Setor removido.');
     } catch (e) {
-        alert(e.response?.data?.message || 'Falha ao remover o setor.');
+        toast.error(e.response?.data?.message || 'Falha ao remover o setor.');
     }
 }
 
@@ -105,7 +109,7 @@ onMounted(load);
 <template>
     <Head title="Setores — Vora" />
     <AppLayout title="Setores">
-        <div class="px-8 py-8 max-w-[1400px] mx-auto">
+        <div class="px-4 sm:px-8 py-8 max-w-[1400px] mx-auto">
             <PageHeader title="Setores" description="Estrutura de atendimento e menu automatizado">
                 <template #actions>
                     <Button v-if="isAdmin" variant="default" @click="openCreate()">

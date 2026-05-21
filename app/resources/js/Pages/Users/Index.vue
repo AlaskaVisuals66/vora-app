@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { onMounted, ref, reactive, computed } from 'vue';
 import axios from 'axios';
 import { UserPlus, Users as UsersIcon, Pencil, Trash2, Power } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 import { useAuth } from '@/Composables/useAuth';
 
 const { isAdmin } = useAuth();
@@ -121,7 +122,10 @@ async function toggleActive(u) {
     try {
         await axios.put(`/api/v1/users/${u.id}`, { is_active: !u.is_active });
         await load();
-    } catch (_) {}
+        toast.success(u.is_active ? 'Usuário desativado.' : 'Usuário reativado.');
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao atualizar usuário.');
+    }
 }
 
 async function remove(u) {
@@ -129,8 +133,9 @@ async function remove(u) {
     try {
         await axios.delete(`/api/v1/users/${u.id}`);
         await load();
+        toast.success('Usuário removido.');
     } catch (e) {
-        alert(e.response?.data?.message || 'Falha ao remover.');
+        toast.error(e.response?.data?.message || 'Falha ao remover.');
     }
 }
 

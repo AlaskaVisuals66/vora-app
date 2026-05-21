@@ -18,14 +18,14 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $key = 'login:'.$request->ip();
+        $credentials = $request->validated();
+        $key = 'login:'.sha1(mb_strtolower($credentials['email']).'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return response()->json([
                 'message' => 'Muitas tentativas. Tente novamente em alguns instantes.',
             ], 429);
         }
 
-        $credentials = $request->validated();
         $user = User::query()->where('email', $credentials['email'])->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
@@ -46,7 +46,18 @@ class AuthController extends Controller
 
     public function refresh(): JsonResponse
     {
-        $newToken = JWTAuth::parseToken()->refresh();
+        try {
+            $token  = JWTAuth::parseToken();
+            $userId = $token->getPayload()->get('sub');
+            $user   = User::find($userId);
+            if (! $user || ! $user->is_active) {
+                return response()->json(['message' => 'Usuário inativo'], 403);
+            }
+            $newToken = $token->refresh();
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Token inválido'], 401);
+        }
+
         return response()->json([
             'access_token' => $newToken,
             'token_type'   => 'bearer',
@@ -63,6 +74,9 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $user = $request->user();
+        if ($user) {
+            $user->forceFill(['status' => 'offline', 'last_seen_at' => now()])->save();
+        }
         JWTAuth::invalidate(JWTAuth::getToken());
         $this->audit->log($user, 'auth.logout', $request);
         return response()->json(['message' => 'Sessão encerrada']);
