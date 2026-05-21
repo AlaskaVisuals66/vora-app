@@ -8,6 +8,10 @@
 /app/storage/framework/sessions/*
 /app/storage/framework/views/*
 /app/.env
+/.env
+/.env.local
+.env
+!.env.example
 /app/database/database.sqlite
 /app/_*.php
 /app/qr_helpdesk.png
