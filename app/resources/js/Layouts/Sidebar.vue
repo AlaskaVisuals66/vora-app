@@ -1,22 +1,25 @@
 <script setup>
-import { inject } from 'vue';
+import { computed, inject } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutDashboard, MessagesSquare, Users, Building2, Settings, FlaskConical,
 } from 'lucide-vue-next';
+import { useAuth } from '@/Composables/useAuth';
 
 const isDev = import.meta.env.DEV;
 const page  = usePage();
+const { isAdmin } = useAuth();
 const sidebarOpen = inject('sidebarOpen', null);
 const closeSidebar = inject('closeSidebar', () => {});
 
-const nav = [
+const allNav = [
     { label: 'Início',        icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Conversas',     icon: MessagesSquare,  href: '/conversations' },
-    { label: 'Setores',       icon: Building2,       href: '/sectors' },
-    { label: 'Usuários',      icon: Users,           href: '/users' },
-    { label: 'Configurações', icon: Settings,        href: '/settings' },
+    { label: 'Setores',       icon: Building2,       href: '/sectors',     adminOnly: true },
+    { label: 'Usuários',      icon: Users,           href: '/users',       adminOnly: true },
+    { label: 'Configurações', icon: Settings,        href: '/settings',    adminOnly: true },
 ];
+const nav = computed(() => allNav.filter(item => !item.adminOnly || isAdmin.value));
 
 const devNav = [
     { label: 'Simulador', icon: FlaskConical, href: '/simulator' },

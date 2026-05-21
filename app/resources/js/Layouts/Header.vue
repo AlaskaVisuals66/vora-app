@@ -14,6 +14,8 @@ import {
 } from '@/Components/ui/dropdown-menu';
 import ThemeToggle from '@/Components/vora/ThemeToggle.vue';
 import UserMenu from '@/Components/vora/UserMenu.vue';
+import { computed } from 'vue';
+import { useAuth } from '@/Composables/useAuth';
 
 defineProps({
     title: { type: String, default: '' },
@@ -21,15 +23,17 @@ defineProps({
 
 const searchOpen = ref(false);
 const toggleSidebar = inject('toggleSidebar', () => {});
+const { isAdmin } = useAuth();
 
-const navItems = [
+const allNavItems = [
     { label: 'Início',        icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Conversas',     icon: MessagesSquare,  href: '/conversations' },
-    { label: 'Setores',       icon: Building2,       href: '/sectors' },
-    { label: 'Usuários',      icon: Users,           href: '/users' },
-    { label: 'Configurações', icon: Settings,        href: '/settings' },
+    { label: 'Setores',       icon: Building2,       href: '/sectors',     adminOnly: true },
+    { label: 'Usuários',      icon: Users,           href: '/users',       adminOnly: true },
+    { label: 'Configurações', icon: Settings,        href: '/settings',    adminOnly: true },
     { label: 'Perfil',        icon: UserIcon,        href: '/profile' },
 ];
+const navItems = computed(() => allNavItems.filter(item => !item.adminOnly || isAdmin.value));
 
 function go(href) {
     searchOpen.value = false;

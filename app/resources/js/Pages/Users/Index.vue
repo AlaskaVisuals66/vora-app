@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { onMounted, ref, reactive, computed } from 'vue';
 import axios from 'axios';
 import { UserPlus, Users as UsersIcon, Pencil, Trash2, Power } from 'lucide-vue-next';
+import { useAuth } from '@/Composables/useAuth';
 
+const { isAdmin } = useAuth();
 const users = ref([]);
 const sectors = ref([]);
 const loading = ref(true);
@@ -139,7 +141,7 @@ onMounted(() => { load(); loadSectors(); });
     <Head title="Usuários — Vora" />
     <AppLayout title="Usuários">
         <div class="px-4 sm:px-8 py-6 sm:py-8 max-w-[1400px] mx-auto">
-                <div class="flex justify-end pb-5">
+                <div v-if="isAdmin" class="flex justify-end pb-5">
                     <Button variant="default" @click="openCreate">
                         <UserPlus class="h-4 w-4" />
                         Convidar usuário
@@ -208,7 +210,7 @@ onMounted(() => { load(); loadSectors(); });
                                                 </Badge>
                                             </td>
                                             <td class="px-6 py-2.5 text-right">
-                                                <div class="inline-flex items-center gap-0.5">
+                                                <div v-if="isAdmin" class="inline-flex items-center gap-0.5">
                                                     <button type="button" @click="openEdit(u)"
                                                             title="Editar"
                                                             class="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
@@ -225,6 +227,7 @@ onMounted(() => { load(); loadSectors(); });
                                                         <Trash2 class="h-3.5 w-3.5" />
                                                     </button>
                                                 </div>
+                                                <span v-else class="text-[12px] text-muted-foreground">—</span>
                                             </td>
                                         </tr>
                                         <tr v-if="!loading && !users.length">
@@ -279,7 +282,7 @@ onMounted(() => { load(); loadSectors(); });
                                         <span>Atend.: <span class="text-foreground font-medium">{{ u.in_progress ?? 0 }}</span></span>
                                         <span>Resolv.: <span class="text-foreground font-medium">{{ u.resolved ?? 0 }}</span></span>
                                     </div>
-                                    <div class="inline-flex items-center gap-0.5">
+                                    <div v-if="isAdmin" class="inline-flex items-center gap-0.5">
                                         <button type="button" @click="openEdit(u)"
                                                 aria-label="Editar"
                                                 class="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
