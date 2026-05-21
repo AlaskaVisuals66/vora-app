@@ -29,9 +29,10 @@ class WhatsappSessionController extends Controller
         $tenant   = $request->user()->tenant;
         app()->instance('tenant.id', $tenantId);
 
-        $maxSessions = 1;
+        $settings    = $tenant->settings ?? [];
+        $maxSessions = (int) ($settings['max_sessions'] ?? 1);
         $current     = WhatsappSession::where('tenant_id', $tenantId)->count();
-        $evolutionConfig = $this->evolutionConfig($tenant->settings ?? []);
+        $evolutionConfig = $this->evolutionConfig($settings);
         $webhookEvents = $this->webhookEvents($evolutionConfig['webhook_events'] ?? null);
 
         if ($current >= $maxSessions) {
@@ -44,12 +45,19 @@ class WhatsappSessionController extends Controller
             'is_primary'    => ['boolean'],
         ]);
 
+        $isPrimary = (bool) ($data['is_primary'] ?? true);
+        if ($isPrimary) {
+            WhatsappSession::where('tenant_id', $tenantId)
+                ->where('is_primary', true)
+                ->update(['is_primary' => false]);
+        }
+
         $session = WhatsappSession::create([
             'tenant_id'      => $tenantId,
             'instance_name'  => $data['instance_name'],
             'display_name'   => $data['display_name'] ?? $data['instance_name'],
             'state'          => 'qr_pending',
-            'is_primary'     => true,
+            'is_primary'     => $isPrimary,
             'webhook_events' => $webhookEvents,
         ]);
 

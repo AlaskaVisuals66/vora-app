@@ -23,6 +23,11 @@ it('admin can create a session', function () {
 });
 
 it('setting a session as primary unsets previous primary', function () {
+    $settings = $this->tenant->settings ?? [];
+    $settings['max_sessions'] = 2;
+    $this->tenant->settings = $settings;
+    $this->tenant->save();
+
     WhatsappSession::create([
         'tenant_id'     => $this->tenant->id,
         'instance_name' => 'first-'.uniqid(),
