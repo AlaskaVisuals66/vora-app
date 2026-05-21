@@ -29,8 +29,7 @@ class TicketController extends Controller
             ->latest('last_message_at');
 
         if ($user->isAttendant()) {
-            $query->where(fn ($q) => $q->where('assigned_to', $user->id)
-                ->orWhereIn('sector_id', $user->sectors()->pluck('sectors.id')));
+            $query->whereIn('sector_id', $user->sectors()->pluck('sectors.id'));
         }
 
         if ($request->filled('status'))    $query->where('status', $request->get('status'));
@@ -122,7 +121,8 @@ class TicketController extends Controller
     {
         if ($ticket->tenant_id !== $user->tenant_id) abort(403);
         if ($user->isAdmin() || $user->isSupervisor()) return;
-        if ($ticket->assigned_to === $user->id) return;
-        abort(403, 'Acesso negado a este ticket.');
+        if (! in_array($ticket->sector_id, $user->sectors()->pluck('sectors.id')->all(), true)) {
+            abort(403, 'Acesso negado a este ticket.');
+        }
     }
 }
