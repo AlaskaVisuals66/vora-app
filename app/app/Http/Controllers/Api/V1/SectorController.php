@@ -15,7 +15,13 @@ class SectorController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $tenantId = $request->user()->tenant_id;
+        $user     = $request->user();
+        $tenantId = $user->tenant_id;
+
+        $restrictToOwn   = $user->isAttendant() || $user->isSupervisor();
+        $allowedSectorIds = $restrictToOwn
+            ? $user->sectors()->pluck('sectors.id')->all()
+            : null;
 
         $openCounts = Ticket::query()
             ->where('tenant_id', $tenantId)
@@ -25,14 +31,27 @@ class SectorController extends Controller
             ->groupBy('sector_id')
             ->pluck('total', 'sector_id');
 
-        $sectors = Sector::query()
+        $sectorsQuery = Sector::query()
             ->where('tenant_id', $tenantId)
             ->where('active', true)
             ->whereNull('parent_id')
             ->withCount('attendants')
-            ->with(['children' => fn ($q) => $q->where('active', true)->withCount('attendants')->orderBy('order')])
-            ->orderBy('order')
-            ->get();
+            ->with(['children' => function ($q) use ($allowedSectorIds) {
+                $q->where('active', true)->withCount('attendants')->orderBy('order');
+                if ($allowedSectorIds !== null) {
+                    $q->whereIn('id', $allowedSectorIds);
+                }
+            }])
+            ->orderBy('order');
+
+        if ($allowedSectorIds !== null) {
+            $sectorsQuery->where(function ($q) use ($allowedSectorIds) {
+                $q->whereIn('id', $allowedSectorIds)
+                  ->orWhereHas('children', fn ($cq) => $cq->whereIn('id', $allowedSectorIds));
+            });
+        }
+
+        $sectors = $sectorsQuery->get();
 
         $present = function (Sector $s) use ($openCounts, &$present): array {
             return [
