@@ -38,6 +38,7 @@ const filterOpen = ref(false);
 const transferOpen = ref(false);
 const transferring = ref(false);
 const transferSectorId = ref(null);
+const transferSectors = ref([]);
 
 const flatSectors = computed(() => {
     const out = [];
@@ -45,7 +46,7 @@ const flatSectors = computed(() => {
         out.push({ id: s.id, name: s.name, color: s.color });
         if (s.children?.length) walk(s.children);
     });
-    walk(sectors.value);
+    walk(transferSectors.value.length ? transferSectors.value : sectors.value);
     return out;
 });
 
@@ -60,9 +61,15 @@ async function closeActive() {
     }
 }
 
-function openTransfer() {
+async function openTransfer() {
     transferSectorId.value = store.active?.sector?.id ?? null;
     transferOpen.value = true;
+    try {
+        const { data } = await axios.get('/api/v1/sectors', { params: { all: 1 } });
+        transferSectors.value = data.data || [];
+    } catch (e) {
+        transferSectors.value = [];
+    }
 }
 
 async function submitTransfer() {

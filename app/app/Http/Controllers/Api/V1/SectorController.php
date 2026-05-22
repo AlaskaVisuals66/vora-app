@@ -18,7 +18,8 @@ class SectorController extends Controller
         $user     = $request->user();
         $tenantId = $user->tenant_id;
 
-        $restrictToOwn   = $user->isAttendant() || $user->isSupervisor();
+        $includeAll      = $request->boolean('all');
+        $restrictToOwn   = ! $includeAll && ($user->isAttendant() || $user->isSupervisor());
         $allowedSectorIds = $restrictToOwn
             ? $user->sectors()->pluck('sectors.id')->all()
             : null;
