@@ -169,7 +169,16 @@ class ConversationOrchestrator
     private function replyAndPersist(Ticket $ticket, string $instance, string $jid, string $text): void
     {
         $resp = null;
-        try { $resp = $this->evolution->sendText($instance, $jid, $text); } catch (\Throwable $e) {}
+        try {
+            $resp = $this->evolution->sendText($instance, $jid, $text);
+        } catch (\Throwable $e) {
+            \Log::channel('evolution')->error('orchestrator.sendText failed', [
+                'instance' => $instance,
+                'jid'      => $jid,
+                'class'    => get_class($e),
+                'message'  => $e->getMessage(),
+            ]);
+        }
 
         $message = Message::create([
             'tenant_id'   => $ticket->tenant_id,
