@@ -35,6 +35,7 @@ const tenantChannel = ref(null);
 const ticketChannel = ref(null);
 const typingTimer = ref(null);
 const filterOpen = ref(false);
+const sectorPickerOpen = ref(false);
 const transferOpen = ref(false);
 const transferring = ref(false);
 const transferSectorId = ref(null);
@@ -326,9 +327,76 @@ onBeforeUnmount(() => {
                 :class="store.active ? 'hidden md:flex' : 'flex'"
             >
                 <div class="px-4 pt-4 pb-3 border-b border-border">
-                    <h2 class="text-[14px] font-semibold text-foreground mb-3">
+                    <h2 class="hidden md:block text-[14px] font-semibold text-foreground mb-3">
                         {{ currentSector ? currentSector.name : 'Todas as conversas' }}
                     </h2>
+
+                    <!-- Sector picker (mobile only) -->
+                    <div class="relative mb-3 md:hidden">
+                        <button
+                            @click="sectorPickerOpen = !sectorPickerOpen"
+                            class="flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/60"
+                        >
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span v-if="currentSector"
+                                      class="h-2 w-2 shrink-0 rounded-full"
+                                      :style="{ backgroundColor: currentSector.color || '#64748b' }" />
+                                <Inbox v-else class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                <span class="truncate">{{ currentSector ? currentSector.name : 'Todos os setores' }}</span>
+                            </div>
+                            <svg class="h-3.5 w-3.5 text-muted-foreground transition-transform" :class="sectorPickerOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+
+                        <div v-if="sectorPickerOpen" class="fixed inset-0 z-40" @click="sectorPickerOpen = false" />
+
+                        <Transition
+                            enter-from-class="opacity-0 -translate-y-1"
+                            enter-active-class="transition duration-100"
+                            leave-to-class="opacity-0 -translate-y-1"
+                            leave-active-class="transition duration-100"
+                        >
+                            <div v-if="sectorPickerOpen"
+                                 class="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-md border border-border bg-card shadow-md">
+                                <button
+                                    @click="selectSector(null); sectorPickerOpen = false"
+                                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium transition-colors hover:bg-muted/60"
+                                    :class="!currentSector ? 'bg-primary/10 text-foreground' : 'text-muted-foreground'"
+                                >
+                                    <Inbox class="h-3.5 w-3.5 shrink-0" />
+                                    <span class="flex-1 truncate">Todos</span>
+                                    <Check v-if="!currentSector" class="h-3.5 w-3.5 text-primary" />
+                                </button>
+                                <template v-for="s in sectors" :key="`mp-${s.id}`">
+                                    <button
+                                        @click="selectSector(s); sectorPickerOpen = false"
+                                        class="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-muted/60"
+                                        :class="currentSector?.id === s.id ? 'bg-primary/10 font-semibold text-foreground' : 'text-muted-foreground'"
+                                    >
+                                        <span class="h-2 w-2 shrink-0 rounded-full"
+                                              :style="{ backgroundColor: s.color || '#64748b' }" />
+                                        <span class="flex-1 truncate">{{ s.name }}</span>
+                                        <span v-if="sectorTotal(s) > 0"
+                                              class="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">
+                                            {{ sectorTotal(s) }}
+                                        </span>
+                                        <Check v-if="currentSector?.id === s.id" class="h-3.5 w-3.5 text-primary" />
+                                    </button>
+                                    <button
+                                        v-for="child in (s.children || [])"
+                                        :key="`mp-c-${child.id}`"
+                                        @click="selectSector(child); sectorPickerOpen = false"
+                                        class="flex w-full items-center gap-2 pl-7 pr-3 py-1.5 text-left text-[12.5px] transition-colors hover:bg-muted/60"
+                                        :class="currentSector?.id === child.id ? 'bg-primary/10 font-semibold text-foreground' : 'text-muted-foreground'"
+                                    >
+                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full"
+                                              :style="{ backgroundColor: child.color || s.color || '#64748b' }" />
+                                        <span class="flex-1 truncate">{{ child.name }}</span>
+                                        <Check v-if="currentSector?.id === child.id" class="h-3.5 w-3.5 text-primary" />
+                                    </button>
+                                </template>
+                            </div>
+                        </Transition>
+                    </div>
 
                     <div class="relative">
                         <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
