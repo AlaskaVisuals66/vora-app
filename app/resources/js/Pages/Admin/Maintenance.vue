@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { computed, ref, watch } from 'vue';
 import axios from 'axios';
 import { toast } from 'vue-sonner';
-import { Trash2, Search, AlertTriangle, EraserIcon } from 'lucide-vue-next';
+import { Trash2, Search, AlertTriangle, Eraser } from 'lucide-vue-next';
 import { useAuth } from '@/Composables/useAuth';
 
 const { isAdmin } = useAuth();
@@ -195,7 +195,7 @@ async function wipeAll() {
                 <Card class="border-destructive/40">
                     <CardHeader>
                         <CardTitle class="text-base flex items-center gap-2">
-                            <EraserIcon class="h-4 w-4 text-destructive" />
+                            <Eraser class="h-4 w-4 text-destructive" />
                             Zona de perigo
                         </CardTitle>
                         <CardDescription>
