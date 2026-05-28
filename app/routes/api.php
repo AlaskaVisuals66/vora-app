@@ -4,6 +4,7 @@ use App\Domain\Auth\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\V1\AdminMaintenanceController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\MessageMediaController;
 use App\Http\Controllers\Api\V1\PresenceController;
 use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\TenantController;
@@ -51,6 +52,7 @@ Route::prefix('v1')->group(function () {
         Route::get('tickets',                    [TicketController::class, 'index']);
         Route::get('tickets/{ticket}',           [TicketController::class, 'show']);
         Route::get('tickets/{ticket}/messages',  [TicketController::class, 'messages']);
+        Route::get('messages/{message}/media',   [MessageMediaController::class, 'show']);
         Route::post('tickets/{ticket}/messages', [TicketController::class, 'send']);
         Route::post('tickets/{ticket}/transfer/sector', [TicketController::class, 'transferToSector']);
         Route::post('tickets/{ticket}/transfer/user',   [TicketController::class, 'transferToUser']);

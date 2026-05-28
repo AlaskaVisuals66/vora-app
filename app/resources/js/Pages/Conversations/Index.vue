@@ -36,6 +36,42 @@ const ticketChannel = ref(null);
 const typingTimer = ref(null);
 const filterOpen = ref(false);
 const sectorPickerOpen = ref(false);
+
+const messagesWithDates = computed(() => {
+    const out = [];
+    let lastKey = '';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const fmt = (d) => {
+        const day = new Date(d);
+        day.setHours(0, 0, 0, 0);
+        if (day.getTime() === today.getTime()) return 'Hoje';
+        if (day.getTime() === yesterday.getTime()) return 'Ontem';
+        const sameYear = day.getFullYear() === today.getFullYear();
+        const dd = String(day.getDate()).padStart(2, '0');
+        const mm = String(day.getMonth() + 1).padStart(2, '0');
+        return sameYear ? `${dd}/${mm}` : `${dd}/${mm}/${day.getFullYear()}`;
+    };
+
+    for (const m of store.messages) {
+        const ts = m.sent_at || m.delivered_at || m.created_at;
+        if (!ts) {
+            out.push({ kind: 'msg', message: m, _id: `m-${m.id}` });
+            continue;
+        }
+        const d = new Date(ts);
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (key !== lastKey) {
+            out.push({ kind: 'date', label: fmt(ts), _id: `d-${key}` });
+            lastKey = key;
+        }
+        out.push({ kind: 'msg', message: m, _id: `m-${m.id}` });
+    }
+    return out;
+});
 const transferOpen = ref(false);
 const transferring = ref(false);
 const transferSectorId = ref(null);
@@ -514,7 +550,14 @@ onBeforeUnmount(() => {
                              class="text-center text-[13px] text-muted-foreground">
                             Carregando mensagens…
                         </div>
-                        <MessageBubble v-for="m in store.messages" :key="m.id" :message="m" />
+                        <template v-for="item in messagesWithDates" :key="item._id">
+                            <div v-if="item.kind === 'date'" class="flex justify-center my-4">
+                                <span class="text-[11px] px-3 py-1 bg-card border border-border text-muted-foreground rounded-full shadow-sm font-medium tabular-nums">
+                                    {{ item.label }}
+                                </span>
+                            </div>
+                            <MessageBubble v-else :message="item.message" />
+                        </template>
                         <div v-if="typingNow.length"
                              class="text-[12px] text-muted-foreground italic mt-3 px-1">
                             {{ typingNow.map(t => t.name).join(', ') }} digitando…
