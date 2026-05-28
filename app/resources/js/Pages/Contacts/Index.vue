@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { computed, onMounted, ref, watch } from 'vue';
 import axios from 'axios';
 import { toast } from 'vue-sonner';
-import { MessageSquarePlus, Search, Phone, Loader2, UserPlus } from 'lucide-vue-next';
+import { MessageSquarePlus, Search, Phone, Loader2, UserPlus, Plus } from 'lucide-vue-next';
 
 const clients = ref([]);
 const loading = ref(true);
@@ -25,6 +25,13 @@ const newPhone = ref('');
 const newName = ref('');
 const pickedId = ref(null);
 const starting = ref(false);
+
+const contactDialogOpen = ref(false);
+const contactName = ref('');
+const contactPhone = ref('');
+const contactEmail = ref('');
+const savingContact = ref(false);
+const contactDigits = computed(() => (contactPhone.value || '').replace(/\D+/g, ''));
 
 const digitsOnly = computed(() => (newPhone.value || '').replace(/\D+/g, ''));
 
@@ -91,6 +98,35 @@ async function startChat() {
     }
 }
 
+function openAddContact() {
+    contactName.value = '';
+    contactPhone.value = '';
+    contactEmail.value = '';
+    contactDialogOpen.value = true;
+}
+
+async function saveContact() {
+    if (contactDigits.value.length < 8) {
+        toast.error('Telefone inválido.');
+        return;
+    }
+    savingContact.value = true;
+    try {
+        await axios.post('/api/v1/clients', {
+            name: contactName.value || undefined,
+            phone: contactDigits.value,
+            email: contactEmail.value || undefined,
+        });
+        contactDialogOpen.value = false;
+        toast.success('Contato salvo.');
+        await load();
+    } catch (e) {
+        toast.error(e?.response?.data?.message || 'Falha ao salvar contato.');
+    } finally {
+        savingContact.value = false;
+    }
+}
+
 onMounted(load);
 </script>
 
@@ -100,6 +136,10 @@ onMounted(load);
         <div class="mx-auto w-full max-w-3xl p-4 sm:p-6">
             <PageHeader title="Contatos" description="Todos os contatos do tenant. Inicie uma conversa por telefone ou da lista.">
                 <template #actions>
+                    <Button @click="openAddContact" variant="outline" class="gap-2">
+                        <Plus class="h-4 w-4" />
+                        <span class="hidden sm:inline">Novo contato</span>
+                    </Button>
                     <Button @click="openNew" class="gap-2">
                         <MessageSquarePlus class="h-4 w-4" />
                         <span class="hidden sm:inline">Nova conversa</span>
@@ -144,6 +184,41 @@ onMounted(load);
                 <span class="text-muted-foreground">Página {{ page }} de {{ lastPage }}</span>
                 <Button variant="outline" size="sm" :disabled="page >= lastPage" @click="page++; load()">Próxima</Button>
             </div>
+
+            <!-- Dialogo: novo contato (sem iniciar conversa) -->
+            <Dialog v-model:open="contactDialogOpen">
+                <DialogContent class="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle class="flex items-center gap-2">
+                            <UserPlus class="h-5 w-5" />
+                            Novo contato
+                        </DialogTitle>
+                        <DialogDescription>Adiciona um contato sem iniciar conversa.</DialogDescription>
+                    </DialogHeader>
+                    <div class="space-y-3">
+                        <div class="space-y-2">
+                            <Label for="c-name">Nome</Label>
+                            <Input id="c-name" v-model="contactName" placeholder="Nome do contato" autocomplete="off" />
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="c-phone">Telefone</Label>
+                            <Input id="c-phone" v-model="contactPhone" placeholder="ex: 5521982212296" inputmode="tel" autocomplete="off" />
+                            <p v-if="contactDigits" class="text-xs text-muted-foreground">Vai salvar: <span class="font-mono">{{ contactDigits }}</span></p>
+                        </div>
+                        <div class="space-y-2">
+                            <Label for="c-email">E-mail (opcional)</Label>
+                            <Input id="c-email" v-model="contactEmail" type="email" placeholder="email@exemplo.com" autocomplete="off" />
+                        </div>
+                    </div>
+                    <DialogFooter class="flex-col-reverse sm:flex-row gap-2">
+                        <Button variant="ghost" class="w-full sm:w-auto" @click="contactDialogOpen = false">Cancelar</Button>
+                        <Button class="w-full sm:w-auto" :disabled="savingContact || contactDigits.length < 8" @click="saveContact">
+                            <Loader2 v-if="savingContact" class="h-4 w-4 mr-2 animate-spin" />
+                            {{ savingContact ? 'Salvando…' : 'Salvar' }}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog v-model:open="dialogOpen">
                 <DialogContent class="max-w-md">

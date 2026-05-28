@@ -38,6 +38,35 @@ class ClientController extends Controller
         return response()->json($query->paginate($perPage));
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+        $data = $request->validate([
+            'name'  => ['nullable','string','max:191'],
+            'phone' => ['required','string','min:4','max:32'],
+            'email' => ['nullable','email','max:191'],
+        ]);
+        $phone = preg_replace('/\D+/', '', $data['phone']);
+        if (strlen($phone) < 8) {
+            return response()->json(['message' => 'Telefone inválido.'], 422);
+        }
+        $client = Client::firstOrCreate(
+            ['tenant_id' => $tenantId, 'phone' => $phone],
+            [
+                'name'         => $data['name'] ?: $phone,
+                'whatsapp_jid' => $phone . '@s.whatsapp.net',
+                'email'        => $data['email'] ?? null,
+            ]
+        );
+        // Update name/email if provided and changed
+        $dirty = [];
+        if (!empty($data['name']) && $client->name !== $data['name']) $dirty['name'] = $data['name'];
+        if (!empty($data['email']) && $client->email !== $data['email']) $dirty['email'] = $data['email'];
+        if ($dirty) $client->update($dirty);
+
+        return response()->json(['client' => $client->refresh()], 201);
+    }
+
     public function startConversation(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
@@ -70,13 +99,12 @@ class ClientController extends Controller
             );
         }
 
-        // Reuse open ticket if exists
-        $existing = $client->tickets()
-            ->whereIn('status', ['menu','queued','open','pending'])
-            ->latest('id')
-            ->first();
-
+        // Prefer any existing ticket (latest first). Reopen if it was closed/resolved.
+        $existing = $client->tickets()->latest('id')->first();
         if ($existing) {
+            if (in_array($existing->status, ['closed','resolved'], true)) {
+                $existing->forceFill(['status' => 'open', 'closed_at' => null])->save();
+            }
             return response()->json(['ticket_id' => $existing->id, 'reused' => true]);
         }
 

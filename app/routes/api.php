@@ -61,6 +61,7 @@ Route::prefix('v1')->group(function () {
         Route::get('users', [UserController::class, 'index']);
 
         Route::get('clients',                          [ClientController::class, 'index']);
+        Route::post('clients',                         [ClientController::class, 'store']);
         Route::post('clients/start-conversation',      [ClientController::class, 'startConversation']);
 
         // WhatsApp sessions — read available to all authenticated
