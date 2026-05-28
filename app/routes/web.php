@@ -12,6 +12,7 @@ Route::get('/sectors', fn () => Inertia::render('Sectors/Index'))->name('sectors
 Route::get('/users', fn () => Inertia::render('Users/Index'))->name('users.index');
 Route::get('/settings', fn () => Inertia::render('Settings/Index'))->name('settings');
 Route::get('/profile', fn () => Inertia::render('Profile/Index'))->name('profile');
+Route::get('/admin/maintenance', fn () => Inertia::render('Admin/Maintenance'))->name('admin.maintenance');
 
 if (app()->environment('local')) {
     Route::get('/_ui',        fn () => Inertia::render('_Ui/Index'))->name('_ui');

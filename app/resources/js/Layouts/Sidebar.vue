@@ -2,7 +2,7 @@
 import { computed, inject } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
-    LayoutDashboard, MessagesSquare, Users, Building2, Settings, FlaskConical,
+    LayoutDashboard, MessagesSquare, Users, Building2, Settings, FlaskConical, Wrench,
 } from 'lucide-vue-next';
 import { useAuth } from '@/Composables/useAuth';
 
@@ -17,6 +17,7 @@ const allNav = [
     { label: 'Conversas',     icon: MessagesSquare,  href: '/conversations' },
     { label: 'Usuários',      icon: Users,           href: '/users',       adminOnly: true },
     { label: 'Configurações', icon: Settings,        href: '/settings',    adminOnly: true },
+    { label: 'Manutenção',    icon: Wrench,          href: '/admin/maintenance', adminOnly: true },
 ];
 const nav = computed(() => allNav.filter(item => !item.adminOnly || isAdmin.value));
 

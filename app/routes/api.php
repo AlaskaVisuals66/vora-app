@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Auth\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\V1\AdminMaintenanceController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
 use App\Http\Controllers\Api\V1\PresenceController;
 use App\Http\Controllers\Api\V1\SectorController;
@@ -85,6 +86,11 @@ Route::prefix('v1')->group(function () {
             Route::post('tenant/logo', [TenantController::class, 'uploadLogo']);
             Route::get('tenant/bot', [TenantController::class, 'getBotConfig']);
             Route::put('tenant/bot', [TenantController::class, 'updateBot']);
+
+            // Admin maintenance — wipe conversations to facilitate testing
+            Route::get('admin/maintenance/preview',        [AdminMaintenanceController::class, 'previewByPhone']);
+            Route::post('admin/maintenance/wipe-by-phone', [AdminMaintenanceController::class, 'wipeByPhone']);
+            Route::post('admin/maintenance/wipe-all',      [AdminMaintenanceController::class, 'wipeAllConversations']);
         });
     });
 });
