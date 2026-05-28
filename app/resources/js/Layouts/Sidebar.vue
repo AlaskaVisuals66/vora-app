@@ -2,7 +2,7 @@
 import { computed, inject } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
-    LayoutDashboard, MessagesSquare, Users, Building2, Settings, FlaskConical, Wrench,
+    LayoutDashboard, MessagesSquare, Users, Building2, Settings, FlaskConical, Wrench, BookUser,
 } from 'lucide-vue-next';
 import { useAuth } from '@/Composables/useAuth';
 
@@ -15,6 +15,7 @@ const closeSidebar = inject('closeSidebar', () => {});
 const allNav = [
     { label: 'Início',        icon: LayoutDashboard, href: '/dashboard',   adminOnly: true },
     { label: 'Conversas',     icon: MessagesSquare,  href: '/conversations' },
+    { label: 'Contatos',      icon: BookUser,        href: '/contacts' },
     { label: 'Usuários',      icon: Users,           href: '/users',       adminOnly: true },
     { label: 'Configurações', icon: Settings,        href: '/settings',    adminOnly: true },
     { label: 'Manutenção',    icon: Wrench,          href: '/admin/maintenance', adminOnly: true },

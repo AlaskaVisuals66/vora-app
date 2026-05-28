@@ -3,6 +3,7 @@
 use App\Domain\Auth\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\V1\AdminMaintenanceController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
+use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\PresenceController;
 use App\Http\Controllers\Api\V1\SectorController;
 use App\Http\Controllers\Api\V1\TenantController;
@@ -58,6 +59,9 @@ Route::prefix('v1')->group(function () {
         Route::get('analytics/dashboard',        [AnalyticsController::class, 'dashboard']);
 
         Route::get('users', [UserController::class, 'index']);
+
+        Route::get('clients',                          [ClientController::class, 'index']);
+        Route::post('clients/start-conversation',      [ClientController::class, 'startConversation']);
 
         // WhatsApp sessions — read available to all authenticated
         Route::get('whatsapp/sessions',              [WhatsappSessionController::class, 'index']);
