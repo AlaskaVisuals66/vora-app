@@ -44,10 +44,11 @@ class TicketController extends Controller
         }
         if ($request->filled('search')) {
             $term = '%'.$request->get('search').'%';
-            $query->whereHas('client', fn ($q) => $q->where('name','ilike',$term)->orWhere('phone','ilike',$term));
+            $query->whereHas('client', fn ($q) => $q->where('name','like',$term)->orWhere('phone','like',$term));
         }
 
-        return TicketResource::collection($query->paginate(30))->response();
+        $perPage = min(500, max(20, (int) $request->get('per_page', 200)));
+        return TicketResource::collection($query->paginate($perPage))->response();
     }
 
     public function show(Request $request, Ticket $ticket): JsonResponse

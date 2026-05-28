@@ -16,7 +16,7 @@ export const useConversationsStore = defineStore('conversations', {
         async fetchTickets() {
             this.loading = true;
             try {
-                const params = { ...this.filters };
+                const params = { ...this.filters, per_page: 500 };
                 if (!params.sector_id) delete params.sector_id;
                 if (!params.status)    delete params.status;
                 if (!params.search)    delete params.search;
