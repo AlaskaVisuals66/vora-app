@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Auth\Models\User;
+use App\Domain\Message\Models\Message;
 use App\Domain\Message\Services\OutboundMessageService;
 use App\Domain\Sector\Models\Sector;
 use App\Domain\Ticket\Models\Ticket;
@@ -62,13 +63,20 @@ class TicketController extends Controller
     {
         $this->authorizeTicket($request->user(), $ticket);
 
-        // Chronological order: outbound uses sent_at, inbound uses delivered_at.
-        // Falling back to id (auto-increment) preserves arrival order when timestamps tie.
-        $messages = $ticket->messages()
+        // Show the full conversation history with the same contact — messages
+        // from any ticket of this client (real recent + imported history).
+        $ticketIds = Ticket::where('tenant_id', $ticket->tenant_id)
+            ->where('client_id', $ticket->client_id)
+            ->pluck('id');
+
+        $perPage = min(1000, max(50, (int) $request->get('per_page', 500)));
+
+        $messages = Message::query()
+            ->whereIn('ticket_id', $ticketIds)
             ->with(['attachments','sender:id,name'])
             ->orderByRaw('COALESCE(sent_at, delivered_at, created_at) ASC')
             ->orderBy('id')
-            ->paginate(50);
+            ->paginate($perPage);
 
         return MessageResource::collection($messages)->response();
     }
