@@ -11,13 +11,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { computed, onMounted, ref, watch } from 'vue';
 import axios from 'axios';
 import { toast } from 'vue-sonner';
-import { MessageSquarePlus, Search, Phone, Loader2, UserPlus, Plus } from 'lucide-vue-next';
+import { useAuth } from '@/Composables/useAuth';
+import { MessageSquarePlus, Search, Phone, Loader2, UserPlus, Plus, DownloadCloud, Inbox } from 'lucide-vue-next';
+
+const { isAdmin } = useAuth();
 
 const clients = ref([]);
 const loading = ref(true);
 const search = ref('');
 const page = ref(1);
 const lastPage = ref(1);
+
+const sessions = ref([]);          // os números (instâncias) do tenant
+const activeSession = ref(null);   // null = todos os números
+const importing = ref(false);
+
+const sessionLabel = (s) => s.display_name || s.phone_number || s.instance_name || 'Número';
 
 const dialogOpen = ref(false);
 const mode = ref('new');  // 'new' | 'pick'
@@ -45,7 +54,12 @@ async function load() {
     loading.value = true;
     try {
         const { data } = await axios.get('/api/v1/clients', {
-            params: { search: search.value || undefined, page: page.value, per_page: 50 },
+            params: {
+                search: search.value || undefined,
+                session_id: activeSession.value || undefined,
+                page: page.value,
+                per_page: 50,
+            },
         });
         clients.value = data.data || [];
         lastPage.value = data.last_page || 1;
@@ -127,7 +141,40 @@ async function saveContact() {
     }
 }
 
-onMounted(load);
+async function loadSessions() {
+    try {
+        const { data } = await axios.get('/api/v1/whatsapp/sessions');
+        sessions.value = data.data || [];
+    } catch (e) {
+        sessions.value = [];
+    }
+}
+
+function selectSession(id) {
+    activeSession.value = id;
+    page.value = 1;
+    load();
+}
+
+async function importContacts() {
+    importing.value = true;
+    try {
+        const { data } = await axios.post('/api/v1/clients/import-contacts',
+            activeSession.value ? { session_id: activeSession.value } : {});
+        toast.success(data.message || 'Importação iniciada.');
+        // Dá um tempo pro job processar e recarrega.
+        setTimeout(load, 4000);
+    } catch (e) {
+        toast.error(e?.response?.data?.message || 'Falha ao importar contatos.');
+    } finally {
+        importing.value = false;
+    }
+}
+
+onMounted(() => {
+    loadSessions();
+    load();
+});
 </script>
 
 <template>
@@ -136,6 +183,11 @@ onMounted(load);
         <div class="mx-auto w-full max-w-3xl p-4 sm:p-6">
             <PageHeader title="Contatos" description="Todos os contatos do tenant. Inicie uma conversa por telefone ou da lista.">
                 <template #actions>
+                    <Button v-if="isAdmin" @click="importContacts" :disabled="importing" variant="outline" class="gap-2">
+                        <Loader2 v-if="importing" class="h-4 w-4 animate-spin" />
+                        <DownloadCloud v-else class="h-4 w-4" />
+                        <span class="hidden sm:inline">{{ importing ? 'Importando…' : 'Importar contatos' }}</span>
+                    </Button>
                     <Button @click="openAddContact" variant="outline" class="gap-2">
                         <Plus class="h-4 w-4" />
                         <span class="hidden sm:inline">Novo contato</span>
@@ -152,6 +204,23 @@ onMounted(load);
                 <Input v-model="search" type="text" placeholder="Nome, telefone ou e-mail" class="pl-10 h-10" inputmode="search" />
             </div>
 
+            <!-- Filtro por número (instância) — separa os contatos em vez de tudo junto -->
+            <div v-if="sessions.length" class="mb-4 flex gap-2 overflow-x-auto pb-1">
+                <button
+                    @click="selectSession(null)"
+                    class="shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors"
+                    :class="!activeSession ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:bg-muted/60'">
+                    <Inbox class="h-3.5 w-3.5" /> Todos
+                </button>
+                <button
+                    v-for="s in sessions" :key="s.id"
+                    @click="selectSession(s.id)"
+                    class="shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors"
+                    :class="activeSession === s.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:bg-muted/60'">
+                    {{ sessionLabel(s) }}
+                </button>
+            </div>
+
             <Card>
                 <CardContent class="p-0">
                     <div v-if="loading" class="flex items-center justify-center py-10 text-sm text-muted-foreground">
@@ -163,9 +232,13 @@ onMounted(load);
                             <Avatar class="h-9 w-9 shrink-0"><AvatarFallback>{{ initials(c.name || c.phone) }}</AvatarFallback></Avatar>
                             <div class="min-w-0 flex-1">
                                 <div class="truncate text-[14px] font-medium text-foreground">{{ c.name || c.phone }}</div>
-                                <div class="flex items-center gap-1.5 text-[12px] text-muted-foreground font-mono">
+                                <div class="flex items-center gap-1.5 text-[12px] text-muted-foreground font-mono flex-wrap">
                                     <Phone class="h-3 w-3" /> {{ c.phone }}
-                                    <span v-if="c.tickets_count" class="ml-2 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums">{{ c.tickets_count }} tickets</span>
+                                    <span v-if="c.tickets_count" class="ml-1 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums">{{ c.tickets_count }} tickets</span>
+                                    <span v-for="s in (c.sessions || [])" :key="s.id"
+                                          class="inline-flex items-center rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium font-sans">
+                                        {{ sessionLabel(s) }}
+                                    </span>
                                 </div>
                             </div>
                             <Button size="sm" variant="ghost" class="shrink-0" @click="pickContact(c)">

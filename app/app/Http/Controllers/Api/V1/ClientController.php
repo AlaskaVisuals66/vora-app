@@ -7,6 +7,7 @@ use App\Domain\Ticket\Models\Ticket;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Domain\Ticket\Services\ProtocolGenerator;
 use App\Http\Controllers\Controller;
+use App\Jobs\ImportInstanceContacts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class ClientController extends Controller
         $query = Client::query()
             ->where('tenant_id', $tenantId)
             ->withCount(['tickets'])
+            ->with('sessions:id,display_name,phone_number,instance_name')
             ->orderByDesc('last_message_at')
             ->orderBy('name');
 
@@ -33,9 +35,41 @@ class ClientController extends Controller
             });
         }
 
+        // Filter to contacts that belong to a specific WhatsApp number (instance).
+        if ($sessionId = (int) $request->get('session_id')) {
+            $query->whereHas('sessions', fn ($q) => $q->where('whatsapp_sessions.id', $sessionId));
+        }
+
         $perPage = min(100, max(10, (int) $request->get('per_page', 50)));
 
         return response()->json($query->paginate($perPage));
+    }
+
+    /**
+     * Kick off importing the WhatsApp contact list of one number (session_id) or
+     * all numbers. Runs in the background (one queued job per number).
+     */
+    public function importContacts(Request $request): JsonResponse
+    {
+        $tenantId  = $request->user()->tenant_id;
+        $sessionId = (int) $request->get('session_id');
+
+        $sessions = WhatsappSession::where('tenant_id', $tenantId)
+            ->when($sessionId, fn ($q) => $q->where('id', $sessionId))
+            ->get();
+
+        if ($sessions->isEmpty()) {
+            return response()->json(['message' => 'Nenhum número conectado para importar.'], 422);
+        }
+
+        foreach ($sessions as $session) {
+            ImportInstanceContacts::dispatch($session->id);
+        }
+
+        return response()->json([
+            'message' => "Importação iniciada para {$sessions->count()} número(s). Os contatos vão aparecendo em instantes.",
+            'count'   => $sessions->count(),
+        ]);
     }
 
     public function store(Request $request): JsonResponse

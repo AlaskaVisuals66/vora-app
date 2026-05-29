@@ -161,4 +161,17 @@ class EvolutionApiClient
             'number'   => $jid, 'presence' => $presence, 'delay' => 1500,
         ])->throw()->json();
     }
+
+    /**
+     * All contacts known to an instance. Empty `where` returns everything;
+     * each item carries the contact's jid (id/remoteJid) and WhatsApp name (pushName).
+     */
+    public function findContacts(string $instance): array
+    {
+        $resp = $this->client()->post("/chat/findContacts/{$instance}", ['where' => (object) []]);
+        if ($resp->failed()) {
+            Log::channel('evolution')->error('findContacts failed', ['instance' => $instance, 'body' => $resp->body()]);
+        }
+        return $resp->throw()->json() ?? [];
+    }
 }

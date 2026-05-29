@@ -79,6 +79,9 @@ Route::prefix('v1')->group(function () {
         Route::middleware(['role:admin'])->group(function () {
             Route::delete('whatsapp/sessions/{session}', [WhatsappSessionController::class, 'destroy']);
 
+            // Pull each number's WhatsApp contact list into the contacts page.
+            Route::post('clients/import-contacts', [ClientController::class, 'importContacts']);
+
             Route::apiResource('users', UserController::class)->only(['store','update','destroy']);
 
             Route::post('sectors',                          [SectorController::class, 'store']);
