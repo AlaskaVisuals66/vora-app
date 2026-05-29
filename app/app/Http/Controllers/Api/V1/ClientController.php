@@ -23,8 +23,8 @@ class ClientController extends Controller
             ->where('tenant_id', $tenantId)
             ->withCount(['tickets'])
             ->with('sessions:id,display_name,phone_number,instance_name')
-            ->orderByDesc('last_message_at')
-            ->orderBy('name');
+            ->orderBy('name')
+            ->orderBy('phone');
 
         if ($search = trim((string) $request->get('search', ''))) {
             $like = '%' . $search . '%';
