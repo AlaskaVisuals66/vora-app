@@ -51,8 +51,13 @@ class ImportInstanceContacts implements ShouldQueue
             if (! is_array($c)) {
                 continue;
             }
-            $jid = $c['id'] ?? $c['remoteJid'] ?? null;
-            // Only individual contacts — skip groups (@g.us) and status@broadcast.
+            // The WhatsApp jid is in `remoteJid` (`id` is Evolution's internal id).
+            $jid = $c['remoteJid'] ?? null;
+            if (! is_string($jid) && isset($c['id']) && str_contains((string) $c['id'], '@')) {
+                $jid = (string) $c['id'];
+            }
+            // Only real individual contacts — skip groups (@g.us), privacy ids (@lid),
+            // status@broadcast and anything without a phone in the jid.
             if (! is_string($jid) || ! str_ends_with($jid, '@s.whatsapp.net')) {
                 continue;
             }

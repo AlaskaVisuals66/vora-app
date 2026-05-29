@@ -168,7 +168,7 @@ class EvolutionApiClient
      */
     public function findContacts(string $instance): array
     {
-        $resp = $this->client()->post("/chat/findContacts/{$instance}", ['where' => (object) []]);
+        $resp = $this->client()->post('/chat/findContacts/'.rawurlencode($instance), ['where' => (object) []]);
         if ($resp->failed()) {
             Log::channel('evolution')->error('findContacts failed', ['instance' => $instance, 'body' => $resp->body()]);
         }
