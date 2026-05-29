@@ -56,9 +56,14 @@ class ImportInstanceContacts implements ShouldQueue
             if (! is_string($jid) && isset($c['id']) && str_contains((string) $c['id'], '@')) {
                 $jid = (string) $c['id'];
             }
-            // Only real individual contacts — skip groups (@g.us), privacy ids (@lid),
-            // status@broadcast and anything without a phone in the jid.
-            if (! is_string($jid) || ! str_ends_with($jid, '@s.whatsapp.net')) {
+            if (! is_string($jid)) {
+                continue;
+            }
+            // Skip groups (@g.us) and broadcast lists — keep individual people,
+            // INCLUDING @lid (privacy) contacts. @lid carries no real phone, so we
+            // key them by the lid number; the WhatsApp name (pushName) still comes
+            // through so the contact is recognizable.
+            if (str_ends_with($jid, '@g.us') || str_contains($jid, 'broadcast')) {
                 continue;
             }
             $phone = preg_replace('/\D+/', '', explode('@', $jid)[0]);
