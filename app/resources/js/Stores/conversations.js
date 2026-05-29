@@ -10,9 +10,26 @@ export const useConversationsStore = defineStore('conversations', {
         messages: [],
         messagesLoading: false,
         typingUsers: {},
+        // Sector permission for realtime gating. isAdmin → see everything (matches
+        // the server, which applies no sector filter for admins). Non-admins are
+        // restricted to sectorIds (their actual sector membership).
+        access: { isAdmin: true, sectorIds: null },
     }),
 
     actions: {
+        setAccess(isAdmin, sectorIds) {
+            this.access = {
+                isAdmin: !!isAdmin,
+                sectorIds: isAdmin ? null : (sectorIds || []).map(Number),
+            };
+        },
+
+        canSeeSector(sectorId) {
+            if (this.access.isAdmin || this.access.sectorIds === null) return true;
+            if (sectorId === null || sectorId === undefined) return false;
+            return this.access.sectorIds.includes(Number(sectorId));
+        },
+
         async fetchTickets() {
             this.loading = true;
             try {
@@ -63,10 +80,20 @@ export const useConversationsStore = defineStore('conversations', {
 
         upsertTicket(ticket) {
             if (!ticket || !ticket.id) return;
-            const sectorFilter = this.filters.sector_id;
             const ticketSectorId = ticket.sector_id ?? ticket.sector?.id ?? null;
-            const matchesSector = !sectorFilter || ticketSectorId === sectorFilter;
             const idx = this.tickets.findIndex((t) => t.id === ticket.id);
+
+            // Sector permission gate: a non-admin must never receive a ticket
+            // outside their sectors via realtime — the initial list is already
+            // scoped server-side, but live events broadcast tenant-wide. If a
+            // ticket leaves the user's sectors (e.g. transferred away), drop it.
+            if (!this.canSeeSector(ticketSectorId)) {
+                if (idx >= 0) this.tickets.splice(idx, 1);
+                return;
+            }
+
+            const sectorFilter = this.filters.sector_id;
+            const matchesSector = !sectorFilter || ticketSectorId === sectorFilter;
             if (idx >= 0) {
                 if (!matchesSector) { this.tickets.splice(idx, 1); return; }
                 this.tickets[idx] = { ...this.tickets[idx], ...ticket };

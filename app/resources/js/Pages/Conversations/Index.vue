@@ -25,7 +25,7 @@ const props = defineProps({
 });
 const page = usePage();
 const store = useConversationsStore();
-const { user } = useAuth();
+const { user, isAdmin } = useAuth();
 const currentSector = ref(null);
 const sectors = ref([]);
 
@@ -277,6 +277,9 @@ watch(() => props.sectorSlug, async () => {
 });
 
 onMounted(async () => {
+    // Scope realtime events to the user's sectors before subscribing, so an
+    // attendant never receives tickets from sectors that aren't theirs.
+    store.setAccess(isAdmin.value, user.value?.sector_ids ?? []);
     subscribeTenant();
     await loadSectors();
     await resolveSectorFromSlug();

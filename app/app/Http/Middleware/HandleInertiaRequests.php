@@ -20,7 +20,12 @@ class HandleInertiaRequests extends Middleware
             'auth' => fn () => [
                 'user' => $request->user()
                     ? $request->user()->only(['id','name','email','avatar_path','status','tenant_id'])
-                      + ['roles' => $request->user()->getRoleNames()]
+                      + [
+                          'roles'      => $request->user()->getRoleNames(),
+                          // Actual sector membership (the pivot used to scope tickets),
+                          // so the client can filter realtime events to the user's sectors.
+                          'sector_ids' => $request->user()->sectors()->pluck('sectors.id'),
+                      ]
                     : null,
             ],
             'flash' => fn () => [

@@ -63,10 +63,20 @@ class TicketController extends Controller
     {
         $this->authorizeTicket($request->user(), $ticket);
 
-        // Show the full conversation history with the same contact — messages
-        // from any ticket of this client (real recent + imported history).
+        // Show the contact's conversation history scoped to THIS sector, plus any
+        // tickets not tied to a sector (bot/menu interactions and imported history,
+        // which carry no sector_id). This keeps each department's conversation
+        // isolated — an attendant never sees another sector's chat with the contact —
+        // while still surfacing the contact's earlier/imported history.
         $ticketIds = Ticket::where('tenant_id', $ticket->tenant_id)
             ->where('client_id', $ticket->client_id)
+            ->when(
+                $ticket->sector_id,
+                fn ($q) => $q->where(
+                    fn ($w) => $w->where('sector_id', $ticket->sector_id)->orWhereNull('sector_id')
+                ),
+                fn ($q) => $q->whereNull('sector_id'),
+            )
             ->pluck('id');
 
         $perPage = min(1000, max(50, (int) $request->get('per_page', 500)));
