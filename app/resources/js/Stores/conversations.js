@@ -67,6 +67,18 @@ export const useConversationsStore = defineStore('conversations', {
             this.messages.push(msg);
         },
 
+        async sendMedia(file, caption) {
+            if (!this.active || !file) return;
+            const fd = new FormData();
+            fd.append('media', file);
+            if (caption) fd.append('body', caption);
+            const { data } = await axios.post(`/api/v1/tickets/${this.active.id}/messages`, fd, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            const msg = data.data || data;
+            this.messages.push(msg);
+        },
+
         pushIncomingMessage(msg) {
             if (!msg || !msg.id) return;
             if (this.active && msg.ticket_id === this.active.id) {

@@ -94,8 +94,25 @@ class TicketController extends Controller
     public function send(Request $request, Ticket $ticket): JsonResponse
     {
         $this->authorizeTicket($request->user(), $ticket);
-        $data = $request->validate(['body' => ['required','string','max:8000']]);
-        $message = $this->outbound->sendText($ticket, $request->user(), $data['body']);
+
+        $hasMedia = $request->hasFile('media');
+
+        if ($hasMedia) {
+            $data = $request->validate([
+                'media' => ['required','file','max:51200'],
+                'body'  => ['nullable','string','max:8000'],
+            ]);
+            $message = $this->outbound->sendMedia(
+                $ticket,
+                $request->user(),
+                $request->file('media'),
+                $data['body'] ?? null,
+            );
+        } else {
+            $data = $request->validate(['body' => ['required','string','max:8000']]);
+            $message = $this->outbound->sendText($ticket, $request->user(), $data['body']);
+        }
+
         return response()->json(['data' => new MessageResource($message)], 201);
     }
 

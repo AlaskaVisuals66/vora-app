@@ -15,7 +15,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuIte
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
-import { Search, Send, MessagesSquare, Inbox, SlidersHorizontal, Check, ArrowLeft, MoreVertical, X, ArrowRightLeft } from 'lucide-vue-next';
+import { Search, Send, MessagesSquare, Inbox, SlidersHorizontal, Check, ArrowLeft, MoreVertical, X, ArrowRightLeft, Paperclip } from 'lucide-vue-next';
+import AudioRecorder from '@/Components/AudioRecorder.vue';
 import { toast } from 'vue-sonner';
 import axios from 'axios';
 
@@ -30,6 +31,8 @@ const currentSector = ref(null);
 const sectors = ref([]);
 
 const draft = ref('');
+const fileInput = ref(null);
+const isDragging = ref(false);
 const messageScroll = ref(null);
 const tenantChannel = ref(null);
 const ticketChannel = ref(null);
@@ -181,6 +184,27 @@ async function send() {
     draft.value = '';
     await store.sendMessage(text);
     await scrollToBottom();
+}
+
+function onFileSelect(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    sendMediaFile(file);
+    e.target.value = '';
+}
+
+async function sendMediaFile(file) {
+    await store.sendMedia(file);
+    await scrollToBottom();
+}
+
+function onDragOver(e) { e.preventDefault(); isDragging.value = true; }
+function onDragLeave() { isDragging.value = false; }
+function onDrop(e) {
+    e.preventDefault();
+    isDragging.value = false;
+    const file = e.dataTransfer.files?.[0];
+    if (file) sendMediaFile(file);
 }
 
 async function scrollToBottom() {
@@ -548,7 +572,9 @@ onBeforeUnmount(() => {
                     </header>
 
                     <div ref="messageScroll"
-                         class="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin bg-dots">
+                         class="flex-1 overflow-y-auto px-6 py-6 scrollbar-thin bg-dots relative"
+                         :class="{ 'ring-2 ring-primary ring-inset': isDragging }"
+                         @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
                         <div v-if="store.messagesLoading"
                              class="text-center text-[13px] text-muted-foreground">
                             Carregando mensagens…
@@ -569,6 +595,12 @@ onBeforeUnmount(() => {
 
                     <footer class="bg-card border-t border-border px-4 py-3 shrink-0">
                         <div class="flex items-end gap-2">
+                            <input ref="fileInput" type="file" class="hidden" accept="image/*,audio/*,video/*,.pdf,.doc,.docx" @change="onFileSelect" />
+                            <Button variant="ghost" size="icon" @click="fileInput?.click()"
+                                    class="shrink-0 text-muted-foreground hover:text-foreground">
+                                <Paperclip class="h-4 w-4" />
+                            </Button>
+                            <AudioRecorder @send="sendMediaFile" />
                             <Textarea v-model="draft" @input="emitTyping"
                                       @keydown.enter.exact.prevent="send"
                                       rows="1" placeholder="Digite sua mensagem…"

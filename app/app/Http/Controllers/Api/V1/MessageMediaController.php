@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Message\Models\Attachment;
 use App\Domain\Message\Models\Message;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Http\Controllers\Controller;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class MessageMediaController extends Controller
 {
@@ -18,6 +20,17 @@ class MessageMediaController extends Controller
         abort_unless($message->tenant_id === $tenantId, 404);
         abort_unless(in_array($message->type, ['image','audio','video','document','sticker'], true), 404);
 
+        // Serve from local storage if the message has an attachment (outbound media)
+        $attachment = $message->attachments()->first();
+        if ($attachment && Storage::disk($attachment->disk)->exists($attachment->path)) {
+            $bytes = Storage::disk($attachment->disk)->get($attachment->path);
+            return response($bytes, 200)
+                ->header('Content-Type', $attachment->mime_type ?: 'application/octet-stream')
+                ->header('Content-Disposition', 'inline; filename="' . ($attachment->original_name ?? 'file') . '"')
+                ->header('Cache-Control', 'private, max-age=86400');
+        }
+
+        // Otherwise fetch from Evolution API (inbound media)
         $cacheKey = "msg_media:{$message->id}";
         $cached = Cache::get($cacheKey);
         if ($cached) {
