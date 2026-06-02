@@ -15,20 +15,17 @@ let mediaRecorder = null;
 let chunks = [];
 let startTime = 0;
 
-// Tenta o melhor formato de áudio disponível no browser
 function getSupportedMimeType() {
     const types = [
+        'audio/ogg;codecs=opus',
         'audio/webm;codecs=opus',
         'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/mp4;codecs=mp4a.40.2',
         'audio/mp4',
-        'audio/aac',
     ];
     for (const t of types) {
         if (MediaRecorder.isTypeSupported(t)) return t;
     }
-    return ''; // browser decide
+    return 'audio/webm';
 }
 
 async function startRecording() {
@@ -36,8 +33,7 @@ async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mimeType = getSupportedMimeType();
-        const options = mimeType ? { mimeType } : {};
-        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder = new MediaRecorder(stream, { mimeType });
         chunks = [];
 
         mediaRecorder.ondataavailable = (e) => {
@@ -45,17 +41,15 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = () => {
-            const type = mimeType || mediaRecorder.mimeType || 'audio/webm';
-            const blob = new Blob(chunks, { type });
+            const blob = new Blob(chunks, { type: mimeType });
             audioBlob.value = blob;
             audioUrl.value = URL.createObjectURL(blob);
             stream.getTracks().forEach(t => t.stop());
         };
 
-        mediaRecorder.onerror = () => {
-            error.value = 'Erro ao gravar áudio.';
-            isRecording.value = false;
-            stream.getTracks().forEach(t => t.stop());
+        mediaRecorder.onerror = (e) => {
+            error.value = 'Erro na gravação';
+            console.error('MediaRecorder error', e);
         };
 
         mediaRecorder.start(250);
@@ -66,13 +60,7 @@ async function startRecording() {
             duration.value = Math.floor((Date.now() - startTime) / 1000);
         }, 500);
     } catch (err) {
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            error.value = 'Permissão do microfone negada.';
-        } else if (err.name === 'NotFoundError') {
-            error.value = 'Microfone não encontrado.';
-        } else {
-            error.value = 'Microfone indisponível.';
-        }
+        error.value = err.name === 'NotAllowedError' ? 'Permissão negada' : 'Erro no microfone';
         console.error('Microphone error', err);
     }
 }
@@ -90,7 +78,9 @@ function cancelRecording() {
         mediaRecorder.ondataavailable = null;
         mediaRecorder.onstop = null;
         mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        if (mediaRecorder.stream) {
+            mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        }
     }
     clearInterval(timer.value);
     isRecording.value = false;
@@ -103,8 +93,9 @@ function cancelRecording() {
 
 function sendRecording() {
     if (!audioBlob.value) return;
-    const ext = audioBlob.value.type.includes('mp4') ? 'mp4' : 'webm';
-    const file = new File([audioBlob.value], `audio-${Date.now()}.${ext}`, { type: audioBlob.value.type });
+    const mime = audioBlob.value.type || 'audio/webm';
+    const ext = mime.includes('ogg') ? 'ogg' : 'webm';
+    const file = new File([audioBlob.value], `audio-${Date.now()}.${ext}`, { type: mime });
     emit('send', file);
     audioBlob.value = null;
     audioUrl.value = null;

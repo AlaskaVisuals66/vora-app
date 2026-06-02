@@ -74,8 +74,8 @@ class OutboundMessageService
             'status'         => 'queued',
         ]);
 
-        $dir = "media/{$ticket->tenant_id}/{$message->id}";
-        $disk = 'local';
+        $dir = "{$ticket->tenant_id}/{$message->id}";
+        $disk = 'media';
         $path = $file->store($dir, $disk);
 
         Attachment::create([
@@ -95,13 +95,11 @@ class OutboundMessageService
         $client = $ticket->client;
 
         if ($session && $client?->whatsapp_jid) {
-            $fullPath = Storage::disk($disk)->path($path);
-            $base64 = base64_encode(file_get_contents($fullPath));
-            $dataUri = "data:{$mime};base64,{$base64}";
+            $publicUrl = Storage::disk($disk)->url($path);
 
             try {
                 if ($type === 'audio') {
-                    $resp = $this->evolution->sendAudio($session->instance_name, $client->whatsapp_jid, $dataUri);
+                    $resp = $this->evolution->sendAudio($session->instance_name, $client->whatsapp_jid, $publicUrl);
                 } else {
                     $mediaType = match ($type) {
                         'image'    => 'image',
@@ -112,7 +110,7 @@ class OutboundMessageService
                         $session->instance_name,
                         $client->whatsapp_jid,
                         $mediaType,
-                        $dataUri,
+                        $publicUrl,
                         $caption,
                         $file->getClientOriginalName(),
                     );
