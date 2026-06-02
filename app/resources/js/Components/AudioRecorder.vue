@@ -1,24 +1,43 @@
 <script setup>
 import { ref, onBeforeUnmount } from 'vue';
-import { Mic, Square, Send, X } from 'lucide-vue-next';
+import { Mic, Square, Send, X, AlertCircle } from 'lucide-vue-next';
 import { Button } from '@/Components/ui/button';
 
 const emit = defineEmits(['send', 'cancel']);
 
 const isRecording = ref(false);
-const isPaused = ref(false);
 const duration = ref(0);
 const audioBlob = ref(null);
 const audioUrl = ref(null);
 const timer = ref(null);
+const error = ref(null);
 let mediaRecorder = null;
 let chunks = [];
 let startTime = 0;
 
+// Tenta o melhor formato de áudio disponível no browser
+function getSupportedMimeType() {
+    const types = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4;codecs=mp4a.40.2',
+        'audio/mp4',
+        'audio/aac',
+    ];
+    for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return ''; // browser decide
+}
+
 async function startRecording() {
+    error.value = null;
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+        const mimeType = getSupportedMimeType();
+        const options = mimeType ? { mimeType } : {};
+        mediaRecorder = new MediaRecorder(stream, options);
         chunks = [];
 
         mediaRecorder.ondataavailable = (e) => {
@@ -26,24 +45,35 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+            const type = mimeType || mediaRecorder.mimeType || 'audio/webm';
+            const blob = new Blob(chunks, { type });
             audioBlob.value = blob;
             audioUrl.value = URL.createObjectURL(blob);
             stream.getTracks().forEach(t => t.stop());
         };
 
+        mediaRecorder.onerror = () => {
+            error.value = 'Erro ao gravar áudio.';
+            isRecording.value = false;
+            stream.getTracks().forEach(t => t.stop());
+        };
+
         mediaRecorder.start(250);
         isRecording.value = true;
-        isPaused.value = false;
         duration.value = 0;
         startTime = Date.now();
         timer.value = setInterval(() => {
-            if (!isPaused.value) {
-                duration.value = Math.floor((Date.now() - startTime) / 1000);
-            }
+            duration.value = Math.floor((Date.now() - startTime) / 1000);
         }, 500);
     } catch (err) {
-        console.error('Microphone access denied', err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            error.value = 'Permissão do microfone negada.';
+        } else if (err.name === 'NotFoundError') {
+            error.value = 'Microfone não encontrado.';
+        } else {
+            error.value = 'Microfone indisponível.';
+        }
+        console.error('Microphone error', err);
     }
 }
 
@@ -67,15 +97,16 @@ function cancelRecording() {
     audioBlob.value = null;
     audioUrl.value = null;
     chunks = [];
+    error.value = null;
     emit('cancel');
 }
 
 function sendRecording() {
     if (!audioBlob.value) return;
-    const file = new File([audioBlob.value], `audio-${Date.now()}.webm`, { type: 'audio/webm;codecs=opus' });
+    const ext = audioBlob.value.type.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([audioBlob.value], `audio-${Date.now()}.${ext}`, { type: audioBlob.value.type });
     emit('send', file);
     audioBlob.value = null;
-    audioUrl.value = null;
     audioUrl.value = null;
     chunks = [];
 }
@@ -97,8 +128,14 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="flex items-center gap-2">
+        <!-- Error state -->
+        <div v-if="error" class="flex items-center gap-1.5 text-[12px] text-destructive">
+            <AlertCircle class="h-3.5 w-3.5 shrink-0" />
+            <span>{{ error }}</span>
+        </div>
+
         <!-- Not recording: show mic button -->
-        <template v-if="!isRecording && !audioBlob">
+        <template v-if="!isRecording && !audioBlob && !error">
             <Button variant="ghost" size="icon" @click="startRecording"
                     class="shrink-0 text-muted-foreground hover:text-foreground">
                 <Mic class="h-4 w-4" />
