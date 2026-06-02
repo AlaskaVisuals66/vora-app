@@ -46,7 +46,7 @@ class OutboundMessageService
                     'message_id' => $message->id,
                     'error'      => $e->getMessage(),
                 ]);
-                $message->update(['status' => 'sent', 'sent_at' => now()]);
+                $message->update(['status' => 'failed', 'failure_reason' => $e->getMessage()]);
             }
         } else {
             // Sem WhatsApp — marca como enviada mesmo assim (modo independente)
@@ -127,7 +127,7 @@ class OutboundMessageService
                     'message_id' => $message->id,
                     'error'      => $e->getMessage(),
                 ]);
-                $message->update(['status' => 'sent', 'sent_at' => now()]);
+                $message->update(['status' => 'failed', 'failure_reason' => $e->getMessage()]);
             }
         } else {
             // Sem WhatsApp — marca como enviada mesmo assim (modo independente)
