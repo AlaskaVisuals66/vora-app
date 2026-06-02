@@ -85,11 +85,12 @@ class OutboundMessageService
         $client = $ticket->client;
         if ($session && $client?->whatsapp_jid) {
             $fullPath = Storage::disk($disk)->path($path);
-            $url = Storage::disk($disk)->url($path);
+            $base64 = base64_encode(file_get_contents($fullPath));
+            $dataUri = "data:{$mime};base64,{$base64}";
 
             try {
                 if ($type === 'audio') {
-                    $resp = $this->evolution->sendAudio($session->instance_name, $client->whatsapp_jid, $url);
+                    $resp = $this->evolution->sendAudio($session->instance_name, $client->whatsapp_jid, $dataUri);
                 } else {
                     $mediaType = match ($type) {
                         'image'    => 'image',
@@ -100,7 +101,7 @@ class OutboundMessageService
                         $session->instance_name,
                         $client->whatsapp_jid,
                         $mediaType,
-                        $url,
+                        $dataUri,
                         $caption,
                         $file->getClientOriginalName(),
                     );
