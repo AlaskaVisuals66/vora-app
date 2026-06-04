@@ -3,17 +3,17 @@
 namespace App\Domain\Message\Services;
 
 use App\Domain\Auth\Models\User;
+use App\Domain\Channel\ChannelManager;
 use App\Domain\Message\Models\Attachment;
 use App\Domain\Message\Models\Message;
 use App\Domain\Ticket\Models\Ticket;
 use App\Events\MessageSent;
-use App\Infra\Evolution\EvolutionApiClient;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class OutboundMessageService
 {
-    public function __construct(private readonly EvolutionApiClient $evolution) {}
+    public function __construct(private readonly ChannelManager $channels) {}
 
     public function sendText(Ticket $ticket, User $sender, string $text): Message
     {
@@ -27,15 +27,12 @@ class OutboundMessageService
             'status'         => 'queued',
         ]);
 
-        $session = $ticket->whatsapp_session_id
-            ? \App\Domain\Ticket\Models\WhatsappSession::find($ticket->whatsapp_session_id)
-            : null;
+        $channel = $this->channels->forTicket($ticket);
+        $identifier = $this->channels->getClientIdentifier($ticket);
 
-        $client = $ticket->client;
-
-        if ($session && $client?->whatsapp_jid) {
+        if ($channel && $identifier) {
             try {
-                $resp = $this->evolution->sendText($session->instance_name, $client->whatsapp_jid, $text);
+                $resp = $channel->sendText($identifier, $text);
                 $message->update([
                     'external_id' => $resp['key']['id'] ?? null,
                     'status'      => 'sent',
@@ -49,7 +46,6 @@ class OutboundMessageService
                 $message->update(['status' => 'failed', 'failure_reason' => $e->getMessage()]);
             }
         } else {
-            // Sem WhatsApp — marca como enviada mesmo assim (modo independente)
             $message->update(['status' => 'sent', 'sent_at' => now()]);
         }
 
@@ -88,32 +84,22 @@ class OutboundMessageService
             'size_bytes'    => $file->getSize(),
         ]);
 
-        $session = $ticket->whatsapp_session_id
-            ? \App\Domain\Ticket\Models\WhatsappSession::find($ticket->whatsapp_session_id)
-            : null;
+        $channel = $this->channels->forTicket($ticket);
+        $identifier = $this->channels->getClientIdentifier($ticket);
 
-        $client = $ticket->client;
-
-        if ($session && $client?->whatsapp_jid) {
+        if ($channel && $identifier) {
             $publicUrl = Storage::disk($disk)->url($path);
 
             try {
                 if ($type === 'audio') {
-                    $resp = $this->evolution->sendAudio($session->instance_name, $client->whatsapp_jid, $publicUrl);
+                    $resp = $channel->sendAudio($identifier, $publicUrl);
                 } else {
                     $mediaType = match ($type) {
                         'image'    => 'image',
                         'video'    => 'video',
                         default    => 'document',
                     };
-                    $resp = $this->evolution->sendMedia(
-                        $session->instance_name,
-                        $client->whatsapp_jid,
-                        $mediaType,
-                        $publicUrl,
-                        $caption,
-                        $file->getClientOriginalName(),
-                    );
+                    $resp = $channel->sendMedia($identifier, $mediaType, $publicUrl, $caption, $file->getClientOriginalName());
                 }
                 $message->update([
                     'external_id' => $resp['key']['id'] ?? null,
@@ -128,14 +114,11 @@ class OutboundMessageService
                 $message->update(['status' => 'failed', 'failure_reason' => $e->getMessage()]);
             }
         } else {
-            // Sem WhatsApp — marca como enviada mesmo assim (modo independente)
             $message->update(['status' => 'sent', 'sent_at' => now()]);
         }
 
         $this->finalizeTicket($ticket);
         broadcast(new MessageSent($message))->toOthers();
-
-        // Carrega attachments pro resource
         $message->load('attachments');
 
         return $message;

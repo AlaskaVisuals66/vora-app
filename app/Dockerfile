@@ -4,7 +4,6 @@
 FROM node:20-alpine AS assets
 WORKDIR /app
 
-# Vite bakes these into the JS bundle at build time
 ARG VITE_PUSHER_APP_KEY
 ARG VITE_PUSHER_HOST
 ARG VITE_PUSHER_PORT=443
@@ -60,6 +59,7 @@ RUN apk add --no-cache \
         libpng-dev \
         libjpeg-turbo-dev \
         freetype-dev \
+        postgresql-dev \
         autoconf \
         g++ \
         make \
@@ -71,7 +71,8 @@ RUN apk add --no-cache \
         intl \
         opcache \
         pcntl \
-        pdo_mysql \
+        pdo_pgsql \
+        pgsql \
         zip \
     && pecl install redis \
     && docker-php-ext-enable redis \

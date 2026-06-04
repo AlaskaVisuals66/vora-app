@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V1\BotConfigController;
 use App\Http\Controllers\Api\V1\DevSimulatorController;
 use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\WhatsappSessionController;
+use App\Http\Controllers\Api\V1\WebChat\WebChatController;
+use App\Http\Controllers\Api\V1\ChannelController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -33,6 +35,12 @@ Route::prefix('v1')->group(function () {
         ->middleware('throttle:webhooks');
     Route::post('webhooks/n8n', [WebhookController::class, 'n8n'])
         ->middleware('throttle:webhooks');
+
+    // Web Chat — public endpoints for the widget
+    Route::get('webchat/config', [WebChatController::class, 'config']);
+    Route::post('webchat/send', [WebChatController::class, 'send'])
+        ->middleware('throttle:api');
+    Route::post('webchat/history', [WebChatController::class, 'history']);
 
     // Auth
     Route::post('auth/login',   [AuthController::class, 'login'])->middleware('throttle:auth');
@@ -79,9 +87,6 @@ Route::prefix('v1')->group(function () {
         Route::middleware(['role:admin'])->group(function () {
             Route::delete('whatsapp/sessions/{session}', [WhatsappSessionController::class, 'destroy']);
 
-            // Pull each number's WhatsApp contact list into the contacts page.
-            Route::post('clients/import-contacts', [ClientController::class, 'importContacts']);
-
             Route::apiResource('users', UserController::class)->only(['store','update','destroy']);
 
             Route::post('sectors',                          [SectorController::class, 'store']);
@@ -96,6 +101,12 @@ Route::prefix('v1')->group(function () {
             Route::post('tenant/logo', [TenantController::class, 'uploadLogo']);
             Route::get('tenant/bot', [TenantController::class, 'getBotConfig']);
             Route::put('tenant/bot', [TenantController::class, 'updateBot']);
+
+            // Channel management (web_chat, etc)
+            Route::get('channels',           [ChannelController::class, 'index']);
+            Route::post('channels',          [ChannelController::class, 'store']);
+            Route::put('channels/{channel}', [ChannelController::class, 'update']);
+            Route::delete('channels/{channel}', [ChannelController::class, 'destroy']);
 
             // Admin maintenance — wipe conversations to facilitate testing
             Route::get('admin/maintenance/preview',        [AdminMaintenanceController::class, 'previewByPhone']);

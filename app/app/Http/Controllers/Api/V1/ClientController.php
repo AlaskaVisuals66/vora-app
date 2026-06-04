@@ -7,7 +7,6 @@ use App\Domain\Ticket\Models\Ticket;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Domain\Ticket\Services\ProtocolGenerator;
 use App\Http\Controllers\Controller;
-use App\Jobs\ImportInstanceContacts;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,9 +21,8 @@ class ClientController extends Controller
         $query = Client::query()
             ->where('tenant_id', $tenantId)
             ->withCount(['tickets'])
-            ->with('sessions:id,display_name,phone_number,instance_name')
-            ->orderBy('name')
-            ->orderBy('phone');
+            ->orderByDesc('last_message_at')
+            ->orderBy('name');
 
         if ($search = trim((string) $request->get('search', ''))) {
             $like = '%' . $search . '%';
@@ -35,41 +33,9 @@ class ClientController extends Controller
             });
         }
 
-        // Filter to contacts that belong to a specific WhatsApp number (instance).
-        if ($sessionId = (int) $request->get('session_id')) {
-            $query->whereHas('sessions', fn ($q) => $q->where('whatsapp_sessions.id', $sessionId));
-        }
-
         $perPage = min(100, max(10, (int) $request->get('per_page', 50)));
 
         return response()->json($query->paginate($perPage));
-    }
-
-    /**
-     * Kick off importing the WhatsApp contact list of one number (session_id) or
-     * all numbers. Runs in the background (one queued job per number).
-     */
-    public function importContacts(Request $request): JsonResponse
-    {
-        $tenantId  = $request->user()->tenant_id;
-        $sessionId = (int) $request->get('session_id');
-
-        $sessions = WhatsappSession::where('tenant_id', $tenantId)
-            ->when($sessionId, fn ($q) => $q->where('id', $sessionId))
-            ->get();
-
-        if ($sessions->isEmpty()) {
-            return response()->json(['message' => 'Nenhum número conectado para importar.'], 422);
-        }
-
-        foreach ($sessions as $session) {
-            ImportInstanceContacts::dispatch($session->id);
-        }
-
-        return response()->json([
-            'message' => "Importação iniciada para {$sessions->count()} número(s). Os contatos vão aparecendo em instantes.",
-            'count'   => $sessions->count(),
-        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -89,10 +55,10 @@ class ClientController extends Controller
             [
                 'name'         => $data['name'] ?: $phone,
                 'whatsapp_jid' => $phone . '@s.whatsapp.net',
+                'channel_type' => 'whatsapp',
                 'email'        => $data['email'] ?? null,
             ]
         );
-        // Update name/email if provided and changed
         $dirty = [];
         if (!empty($data['name']) && $client->name !== $data['name']) $dirty['name'] = $data['name'];
         if (!empty($data['email']) && $client->email !== $data['email']) $dirty['email'] = $data['email'];
@@ -109,11 +75,14 @@ class ClientController extends Controller
             'phone'     => ['nullable','string','max:32'],
             'client_id' => ['nullable','integer'],
             'name'      => ['nullable','string','max:191'],
+            'channel'   => ['nullable','string','in:whatsapp,web_chat'],
         ]);
 
         if (empty($data['phone']) && empty($data['client_id'])) {
             return response()->json(['message' => 'Informe telefone ou contato.'], 422);
         }
+
+        $channel = $data['channel'] ?? 'whatsapp';
 
         $client = null;
         if (!empty($data['client_id'])) {
@@ -124,16 +93,19 @@ class ClientController extends Controller
             if (strlen($phone) < 8) {
                 return response()->json(['message' => 'Telefone inválido.'], 422);
             }
+            $clientData = [
+                'name'  => $data['name'] ?: $phone,
+                'channel_type' => $channel,
+            ];
+            if ($channel === 'whatsapp') {
+                $clientData['whatsapp_jid'] = $phone . '@s.whatsapp.net';
+            }
             $client = Client::firstOrCreate(
                 ['tenant_id' => $tenantId, 'phone' => $phone],
-                [
-                    'name'         => $data['name'] ?: $phone,
-                    'whatsapp_jid' => $phone . '@s.whatsapp.net',
-                ]
+                $clientData
             );
         }
 
-        // Prefer any existing ticket (latest first). Reopen if it was closed/resolved.
         $existing = $client->tickets()->latest('id')->first();
         if ($existing) {
             if (in_array($existing->status, ['closed','resolved'], true)) {
@@ -142,21 +114,27 @@ class ClientController extends Controller
             return response()->json(['ticket_id' => $existing->id, 'reused' => true]);
         }
 
-        $session = WhatsappSession::where('tenant_id', $tenantId)
-            ->where('is_primary', true)
-            ->first();
-        if (!$session) {
-            $session = WhatsappSession::where('tenant_id', $tenantId)->first();
+        $session = null;
+        $whatsappSessionId = null;
+        if ($channel === 'whatsapp') {
+            $session = WhatsappSession::where('tenant_id', $tenantId)
+                ->where('is_primary', true)
+                ->first();
+            if (!$session) {
+                $session = WhatsappSession::where('tenant_id', $tenantId)->first();
+            }
+            $whatsappSessionId = $session?->id;
         }
 
-        $ticket = DB::transaction(function () use ($tenantId, $client, $session) {
+        $ticket = DB::transaction(function () use ($tenantId, $client, $whatsappSessionId, $channel) {
             return Ticket::create([
                 'tenant_id'           => $tenantId,
                 'protocol'            => $this->protocols->next($tenantId),
                 'client_id'           => $client->id,
-                'whatsapp_session_id' => $session?->id,
+                'whatsapp_session_id' => $whatsappSessionId,
                 'status'              => 'open',
-                'channel'             => 'whatsapp',
+                'channel'             => $channel,
+                'channel_type'        => $channel,
             ]);
         });
 
