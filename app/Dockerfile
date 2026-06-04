@@ -74,8 +74,7 @@ RUN apk add --no-cache \
         pdo_pgsql \
         pgsql \
         zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && apk add --no-cache php83-pecl-redis \
     && apk del --no-network autoconf g++ make linux-headers \
     && rm -rf /var/cache/apk/* /tmp/pear
 
