@@ -59,7 +59,6 @@ RUN apk add --no-cache \
         libpng-dev \
         libjpeg-turbo-dev \
         freetype-dev \
-        postgresql-dev \
         autoconf \
         g++ \
         make \
@@ -71,10 +70,19 @@ RUN apk add --no-cache \
         intl \
         opcache \
         pcntl \
-        pdo_pgsql \
-        pgsql \
+        pdo_mysql \
         zip \
-    && apk add --no-cache php83-pecl-redis \
+    && curl -fsSL https://github.com/phpredis/phpredis/archive/6.1.0.tar.gz -o /tmp/redis.tar.gz \
+    && mkdir -p /tmp/redis \
+    && tar xzf /tmp/redis.tar.gz -C /tmp/redis --strip-components=1 \
+    && cd /tmp/redis \
+    && phpize \
+    && ./configure \
+    && make -j"$(nproc)" \
+    && make install \
+    && docker-php-ext-enable redis \
+    && cd /var/www/html \
+    && rm -rf /tmp/redis /tmp/redis.tar.gz \
     && apk del --no-network autoconf g++ make linux-headers \
     && rm -rf /var/cache/apk/* /tmp/pear
 
