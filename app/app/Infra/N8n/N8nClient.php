@@ -23,8 +23,20 @@ class N8nClient
     /** Trigger an arbitrary n8n webhook (workflow that listens on /webhook/<path>). */
     public function trigger(string $path, array $payload): array
     {
-        $url = rtrim((string) config('services.n8n.base_url'), '/').'/webhook/'.ltrim($path, '/');
-        $resp = Http::timeout(10)->retry(2, 200, throw: false)->post($url, $payload);
+        $path = ltrim(trim($path), '/');
+
+        // The path comes from tenant-editable sector settings — keep it confined
+        // to the n8n /webhook/ namespace. Reject traversal, schemes and stray chars.
+        if ($path === '' || str_contains($path, '..') || ! preg_match('#^[A-Za-z0-9/_-]+$#', $path)) {
+            \Log::warning('n8n.trigger.invalid_path', ['path' => $path]);
+            return ['ok' => false, 'error' => 'invalid_webhook_path'];
+        }
+
+        $url = rtrim((string) config('services.n8n.base_url'), '/').'/webhook/'.$path;
+        $resp = Http::timeout(10)
+            ->withOptions(['allow_redirects' => false])
+            ->retry(2, 200, throw: false)
+            ->post($url, $payload);
         return $resp->json() ?? ['ok' => $resp->successful(), 'status' => $resp->status()];
     }
 

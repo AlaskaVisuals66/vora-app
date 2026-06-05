@@ -2,23 +2,24 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Domain\Message\Models\Attachment;
 use App\Domain\Message\Models\Message;
 use App\Domain\Ticket\Models\WhatsappSession;
 use App\Http\Controllers\Controller;
+use App\Infra\Evolution\EvolutionApiClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 class MessageMediaController extends Controller
 {
+    public function __construct(private readonly EvolutionApiClient $evolution) {}
+
     public function show(Request $request, Message $message): Response
     {
         $tenantId = $request->user()->tenant_id;
         abort_unless($message->tenant_id === $tenantId, 404);
-        abort_unless(in_array($message->type, ['image','audio','video','document','sticker'], true), 404);
+        abort_unless(in_array($message->type, ['image','audio','video','document','sticker','location'], true), 404);
 
         // Serve from local storage if the message has an attachment (outbound media)
         $attachment = $message->attachments()->first();
@@ -26,12 +27,13 @@ class MessageMediaController extends Controller
             $bytes = Storage::disk($attachment->disk)->get($attachment->path);
             return response($bytes, 200)
                 ->header('Content-Type', $attachment->mime_type ?: 'application/octet-stream')
-                ->header('Content-Disposition', 'inline; filename="' . ($attachment->original_name ?? 'file') . '"')
+                ->header('Content-Disposition', 'inline; filename="'.$this->safeFilename($attachment->original_name).'"')
                 ->header('Cache-Control', 'private, max-age=86400');
         }
 
-        // Otherwise fetch from Evolution API (inbound media)
-        $cacheKey = "msg_media:{$message->id}";
+        // Otherwise fetch from Evolution API (inbound media). Cache key is
+        // tenant-scoped so private bytes never collide across tenants in Redis.
+        $cacheKey = "msg_media:{$tenantId}:{$message->id}";
         $cached = Cache::get($cacheKey);
         if ($cached) {
             return response($cached['bytes'], 200)
@@ -39,35 +41,18 @@ class MessageMediaController extends Controller
                 ->header('Cache-Control', 'private, max-age=86400');
         }
 
+        if (blank($message->external_id)) abort(404, 'Mídia sem identificador.');
+
         $ticket = $message->ticket;
         $session = $ticket && $ticket->whatsapp_session_id
             ? WhatsappSession::find($ticket->whatsapp_session_id)
             : null;
         if (!$session) abort(404, 'Sessão não encontrada para essa mensagem.');
 
-        $base = rtrim((string) config('services.evolution.url'), '/');
-        $key  = (string) config('services.evolution.api_key');
-        if (!$base || !$key) abort(503, 'Evolution não configurado.');
+        // Resolve Evolution per-tenant (gateway settings) instead of global config.
+        app()->instance('tenant.id', $tenantId);
+        $json = $this->evolution->fetchMediaBase64($session->instance_name, (string) $message->external_id);
 
-        $body = [
-            'message' => [
-                'key' => [
-                    'id' => (string) $message->external_id,
-                ],
-            ],
-            'convertToMp4' => false,
-        ];
-
-        $resp = Http::baseUrl($base)
-            ->withHeaders(['apikey' => $key, 'Accept' => 'application/json'])
-            ->timeout(30)
-            ->post('/chat/getBase64FromMediaMessage/' . rawurlencode($session->instance_name), $body);
-
-        if (!$resp->successful()) {
-            abort(502, 'Falha ao buscar mídia: ' . $resp->status());
-        }
-
-        $json = $resp->json();
         $b64  = $json['base64'] ?? null;
         $mime = $json['mimetype'] ?? ($message->media['mimetype'] ?? null);
         if (!$b64) abort(502, 'Mídia indisponível.');
@@ -80,5 +65,13 @@ class MessageMediaController extends Controller
         return response($bytes, 200)
             ->header('Content-Type', $mime ?: 'application/octet-stream')
             ->header('Cache-Control', 'private, max-age=86400');
+    }
+
+    /** Strip CR/LF/quotes so a client-supplied filename can't inject headers. */
+    private function safeFilename(?string $name): string
+    {
+        $clean = preg_replace('/[\r\n"\\\\]/', '', (string) ($name ?? ''));
+        $clean = trim((string) $clean);
+        return $clean !== '' ? $clean : 'file';
     }
 }

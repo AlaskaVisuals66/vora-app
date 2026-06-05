@@ -99,7 +99,16 @@ class TicketController extends Controller
 
         if ($hasMedia) {
             $data = $request->validate([
-                'media' => ['required','file','max:51200'],
+                'media' => ['required','file','max:51200','mimetypes:'.implode(',', [
+                    'image/jpeg','image/png','image/webp','image/gif',
+                    'video/mp4','video/3gpp','video/quicktime',
+                    'audio/ogg','audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/webm',
+                    'application/pdf','application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'text/plain',
+                ])],
                 'body'  => ['nullable','string','max:8000'],
             ]);
             $message = $this->outbound->sendMedia(

@@ -15,11 +15,16 @@ class WhatsappSessionController extends Controller
     public function index(Request $request): JsonResponse
     {
         return response()->json([
+            // Never list the qr_code (WhatsApp pairing credential) — it is only
+            // returned by the dedicated qr endpoint, per-session and on demand.
             'data' => WhatsappSession::query()
                 ->where('tenant_id', $request->user()->tenant_id)
                 ->orderByDesc('is_primary')
                 ->latest()
-                ->get(),
+                ->get([
+                    'id','tenant_id','instance_name','display_name','state',
+                    'is_primary','connected_at','last_event_at','created_at','updated_at',
+                ]),
         ]);
     }
 

@@ -66,7 +66,8 @@ Route::prefix('v1')->group(function () {
         Route::post('tickets/{ticket}/transfer/user',   [TicketController::class, 'transferToUser']);
         Route::post('tickets/{ticket}/close',           [TicketController::class, 'close']);
 
-        Route::get('analytics/dashboard',        [AnalyticsController::class, 'dashboard']);
+        Route::get('analytics/dashboard',        [AnalyticsController::class, 'dashboard'])
+            ->middleware('role:admin|supervisor');
 
         Route::get('users', [UserController::class, 'index']);
 
@@ -74,9 +75,11 @@ Route::prefix('v1')->group(function () {
         Route::post('clients',                         [ClientController::class, 'store']);
         Route::post('clients/start-conversation',      [ClientController::class, 'startConversation']);
 
-        // WhatsApp sessions — read available to all authenticated
+        // WhatsApp sessions — listing is sanitized (no qr_code). The QR itself
+        // (pairing credential) requires an operator role, like reconnect.
         Route::get('whatsapp/sessions',              [WhatsappSessionController::class, 'index']);
-        Route::get('whatsapp/sessions/{session}/qr', [WhatsappSessionController::class, 'qr']);
+        Route::get('whatsapp/sessions/{session}/qr', [WhatsappSessionController::class, 'qr'])
+            ->middleware('role:admin|supervisor|attendant');
 
         // Create + reconnect: attendants and above
         Route::middleware(['role:admin|supervisor|attendant'])->group(function () {

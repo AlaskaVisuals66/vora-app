@@ -17,6 +17,11 @@ class WebhookController extends Controller
         if ($expected !== '' && ! hash_equals($expected, (string) $request->header('X-Webhook-Secret'))) {
             return response()->json(['message' => 'unauthorized'], 401);
         }
+        if ($expected === '' && app()->isProduction()) {
+            // Fail-open in prod = anyone can inject messages. Set EVOLUTION_WEBHOOK_SECRET
+            // (env + Evolution webhook header) to close this. Warn loudly until then.
+            Log::channel('webhooks')->warning('evolution.webhook.unauthenticated_in_production');
+        }
 
         $payload = $request->all();
         Log::channel('webhooks')->info('evolution.webhook', ['event' => $payload['event'] ?? null]);
@@ -85,7 +90,8 @@ class WebhookController extends Controller
         if ($expected !== '' && ! hash_equals($expected, (string) $request->header('X-Helpdesk-Secret'))) {
             return response()->json(['message' => 'unauthorized'], 401);
         }
-        Log::channel('webhooks')->info('n8n.webhook', $request->all());
+        // Log only the shape, never the full body (may carry PII / secrets).
+        Log::channel('webhooks')->info('n8n.webhook', ['keys' => array_keys($request->all())]);
         return response()->json(['ok' => true]);
     }
 }

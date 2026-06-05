@@ -128,6 +128,23 @@ class EvolutionApiClient
         return $resp->throw()->json();
     }
 
+    /** Fetch inbound media as base64 using the tenant-resolved credentials. Returns [] on failure. */
+    public function fetchMediaBase64(string $instance, string $messageId): array
+    {
+        if ($messageId === '') {
+            return [];
+        }
+        $resp = $this->client()->timeout(30)->post('/chat/getBase64FromMediaMessage/'.rawurlencode($instance), [
+            'message'      => ['key' => ['id' => $messageId]],
+            'convertToMp4' => false,
+        ]);
+        if (! $resp->successful()) {
+            Log::channel('evolution')->error('getBase64 failed', ['instance' => $instance, 'status' => $resp->status()]);
+            return [];
+        }
+        return $resp->json() ?? [];
+    }
+
     public function sendMedia(string $instance, string $jid, string $mediaType, string $mediaUrl, ?string $caption = null, ?string $fileName = null): array
     {
         $payload = [
