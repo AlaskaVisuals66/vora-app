@@ -21,26 +21,32 @@ class AdminMaintenanceController extends Controller
             return response()->json(['phone' => null, 'matches' => []]);
         }
 
-        $matches = Client::query()
+        $clients = Client::query()
             ->where('tenant_id', $tenantId)
             ->where(function ($q) use ($digits) {
                 $q->where('phone', $digits)
                   ->orWhere('phone', 'like', "%{$digits}%");
             })
             ->withCount(['tickets as tickets_count'])
-            ->get(['id','name','phone','whatsapp_jid','last_message_at'])
-            ->map(function ($c) {
-                $messages = Message::whereIn('ticket_id', Ticket::where('client_id', $c->id)->pluck('id'))->count();
-                return [
-                    'id'              => $c->id,
-                    'name'            => $c->name,
-                    'phone'           => $c->phone,
-                    'whatsapp_jid'    => $c->whatsapp_jid,
-                    'last_message_at' => $c->last_message_at,
-                    'tickets_count'   => $c->tickets_count,
-                    'messages_count'  => $messages,
-                ];
-            });
+            ->get(['id','name','phone','whatsapp_jid','last_message_at']);
+
+        // One grouped query for all matched clients instead of 2 per row.
+        $messageCounts = DB::table('messages')
+            ->join('tickets', 'messages.ticket_id', '=', 'tickets.id')
+            ->whereIn('tickets.client_id', $clients->pluck('id'))
+            ->groupBy('tickets.client_id')
+            ->selectRaw('tickets.client_id as cid, count(*) as c')
+            ->pluck('c', 'cid');
+
+        $matches = $clients->map(fn ($c) => [
+            'id'              => $c->id,
+            'name'            => $c->name,
+            'phone'           => $c->phone,
+            'whatsapp_jid'    => $c->whatsapp_jid,
+            'last_message_at' => $c->last_message_at,
+            'tickets_count'   => $c->tickets_count,
+            'messages_count'  => (int) ($messageCounts[$c->id] ?? 0),
+        ]);
 
         return response()->json(['phone' => $digits, 'matches' => $matches]);
     }

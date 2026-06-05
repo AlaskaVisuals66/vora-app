@@ -17,7 +17,14 @@ class MessageResource extends JsonResource
             'direction'    => $this->direction,
             'type'         => $this->type,
             'body'         => $this->body,
-            'media'        => $this->media,
+            // Only expose display-safe media fields — never the raw Evolution blob
+            // (mediaKey, directPath, encryption metadata). Bytes go via /media.
+            'media'        => is_array($this->media) ? array_filter([
+                'mimetype' => $this->media['mimetype'] ?? null,
+                'fileName' => $this->media['fileName'] ?? ($this->media['filename'] ?? null),
+                'caption'  => $this->media['caption'] ?? null,
+                'seconds'  => $this->media['seconds'] ?? null,
+            ], fn ($v) => $v !== null) : null,
             'status'       => $this->status,
             'sender'       => $this->whenLoaded('sender'),
             'attachments'  => AttachmentResource::collection($this->whenLoaded('attachments')),

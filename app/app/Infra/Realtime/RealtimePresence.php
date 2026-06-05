@@ -22,14 +22,14 @@ class RealtimePresence
     {
         $map = Cache::get($this->key($tenantId), []);
         $map[$userId] = time();
-        Cache::put($this->key($tenantId), $map, now()->addMinutes(self::TTL_SECONDS));
+        Cache::put($this->key($tenantId), $map, now()->addSeconds(self::TTL_SECONDS * 2));
     }
 
     public function leave(int $tenantId, int $userId): void
     {
         $map = Cache::get($this->key($tenantId), []);
         unset($map[$userId]);
-        Cache::put($this->key($tenantId), $map, now()->addMinutes(self::TTL_SECONDS));
+        Cache::put($this->key($tenantId), $map, now()->addSeconds(self::TTL_SECONDS * 2));
     }
 
     /** @return int[] user ids active in the last TTL_SECONDS */
