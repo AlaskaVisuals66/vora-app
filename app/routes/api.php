@@ -115,6 +115,11 @@ Route::prefix('v1')->group(function () {
             Route::get('admin/maintenance/preview',        [AdminMaintenanceController::class, 'previewByPhone']);
             Route::post('admin/maintenance/wipe-by-phone', [AdminMaintenanceController::class, 'wipeByPhone']);
             Route::post('admin/maintenance/wipe-all',      [AdminMaintenanceController::class, 'wipeAllConversations']);
+
+            // Stuck-menu rescue — silently route tickets parked in the menu to the
+            // sector the client already chose (no message is sent to the client).
+            Route::get('admin/maintenance/stuck-menus',          [AdminMaintenanceController::class, 'stuckMenus']);
+            Route::post('admin/maintenance/resolve-stuck-menus', [AdminMaintenanceController::class, 'resolveStuckMenus']);
         });
     });
 });
