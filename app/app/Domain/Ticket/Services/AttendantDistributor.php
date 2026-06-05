@@ -23,28 +23,33 @@ class AttendantDistributor
         $sector = Sector::query()->find($ticket->sector_id);
         if (! $sector) return null;
 
-        $strategy = config('helpdesk.distribution.strategy', 'round_robin');
+        $strategy   = config('helpdesk.distribution.strategy', 'round_robin');
         $candidates = $this->candidates($sector);
         if (empty($candidates)) return null;
 
-        $picked = $strategy === 'least_busy'
-            ? $this->pickLeastBusy($candidates, $ticket->tenant_id)
-            : $this->pickRoundRobin($candidates, $sector->id);
-
-        if (! $picked) return null;
-
         return Cache::lock("ticket-assign:{$ticket->id}", config('helpdesk.distribution.lock_ttl'))
-            ->block(2, function () use ($ticket, $picked) {
+            ->block(2, function () use ($ticket, $sector, $strategy, $candidates) {
                 $fresh = Ticket::query()->find($ticket->id);
-                if ($fresh && in_array($fresh->status, ['queued','menu'], true)) {
-                    $fresh->update([
-                        'assigned_to' => $picked->id,
-                        'assigned_at' => now(),
-                        'status'      => 'open',
-                    ]);
-                    return $picked;
+                if (! $fresh || ! in_array($fresh->status, ['queued','menu'], true)) {
+                    return null; // already taken — do NOT advance the round-robin pointer
                 }
-                return null;
+
+                $picked = $strategy === 'least_busy'
+                    ? $this->pickLeastBusy($candidates)
+                    : $this->pickRoundRobin($candidates, $sector->id);
+                if (! $picked) return null;
+
+                $fresh->update([
+                    'assigned_to' => $picked->id,
+                    'assigned_at' => now(),
+                    'status'      => 'open',
+                ]);
+
+                // Advance the pointer only after a committed assignment.
+                if ($strategy !== 'least_busy') {
+                    Cache::increment("rr:sector:{$sector->id}");
+                }
+                return $picked;
             });
     }
 
@@ -69,14 +74,14 @@ class AttendantDistributor
 
     private function pickRoundRobin(array $users, int $sectorId): ?User
     {
-        $key = "rr:sector:{$sectorId}";
-        $idx = (int) (Cache::increment($key) - 1);
-        return $users[$idx % count($users)] ?? null;
+        // Read-only here; the pointer is advanced by assign() only on success.
+        $counter = (int) Cache::get("rr:sector:{$sectorId}", 0);
+        return $users[$counter % count($users)] ?? null;
     }
 
-    private function pickLeastBusy(array $users, int $tenantId): ?User
+    private function pickLeastBusy(array $users): ?User
     {
-        usort($users, fn (User $a, User $b) => ($a->open_count <=> $b->open_count));
+        usort($users, fn (User $a, User $b) => ((int) ($a->open_count ?? 0) <=> (int) ($b->open_count ?? 0)));
         return $users[0] ?? null;
     }
 }

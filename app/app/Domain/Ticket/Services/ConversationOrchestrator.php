@@ -48,12 +48,26 @@ class ConversationOrchestrator
         $tenantId = $session->tenant_id;
         app()->instance('tenant.id', $tenantId);
 
-        DB::transaction(function () use ($evt, $session, $tenantId) {
+        // Idempotency: Evolution can re-deliver the same message (retries, upsert).
+        // If we've already ingested this inbound id, do nothing — never re-send.
+        if ($evt->messageId && Message::query()
+                ->where('tenant_id', $tenantId)
+                ->where('external_id', $evt->messageId)
+                ->where('direction', 'inbound')
+                ->exists()) {
+            return;
+        }
+
+        // Phase 1 — all DB writes inside the transaction. We only COLLECT the
+        // replies/side-effects here; nothing leaves the process until commit.
+        $outcome = DB::transaction(function () use ($evt, $session, $tenantId) {
+            // Lock the client row so two concurrent inbound messages can't each
+            // create a separate "active" ticket for the same conversation.
             $client = Client::firstOrCreate(
                 ['tenant_id' => $tenantId, 'phone' => $evt->fromNumber],
                 ['name' => $evt->pushName, 'whatsapp_jid' => $evt->remoteJid, 'channel_type' => 'whatsapp']
             );
-
+            $client = Client::query()->whereKey($client->id)->lockForUpdate()->first() ?? $client;
             $client->forceFill(['last_message_at' => now()])->save();
 
             $ticket = $client->activeTicket();
@@ -87,45 +101,32 @@ class ConversationOrchestrator
             $ticket->increment('messages_count');
             $ticket->update(['last_message_at' => now()]);
 
-            broadcast(new MessageReceived($message))->toOthers();
-
-            $channel = $this->channels->resolve('evolution', $session->instance_name);
-            $jid = $evt->remoteJid;
-
-            if ($justCreated) {
-                $welcome = $this->menu->start($ticket);
-                $this->replyAndPersist($ticket, $channel, $jid, $welcome);
-            }
-
-            $body = is_string($evt->body) ? trim($evt->body) : '';
+            $body   = is_string($evt->body) ? trim($evt->body) : '';
             $isText = $evt->messageType === 'text' && $body !== '';
 
-            if (! $justCreated && $isText && Str::lower($body) === '#menu' && in_array($ticket->status, ['queued','open','pending'], true)) {
-                $ticket->forceFill(['sector_id' => null, 'assigned_to' => null, 'status' => 'menu'])->save();
-                $welcome = $this->menu->start($ticket);
-                $this->replyAndPersist($ticket, $channel, $jid, $welcome);
-                return;
+            $replies = [];   // text to send the customer after commit
+            $assign  = false;
+            $ai      = null;
+
+            if ($justCreated) {
+                $replies[] = $this->menu->start($ticket);
             }
 
-            if (! $justCreated && $ticket->status === 'menu' && $isText) {
-                $result = $this->menu->consume($ticket, $body);
-                $this->replyAndPersist($ticket, $channel, $jid, $result['reply']);
+            $isMenuReset = ! $justCreated && $isText
+                && Str::lower($body) === '#menu'
+                && in_array($ticket->status, ['queued','open','pending'], true);
 
-                if ($result['done'] && $result['sector']) {
-                    broadcast(new TicketQueued($ticket->refresh()));
-                    $assignee = $this->distributor->assign($ticket);
-                    if ($assignee) {
-                        broadcast(new TicketAssigned($ticket->refresh()));
-                        NotifyN8nEvent::dispatch('ticket.assigned', $ticket->id);
-                    } else {
-                        NotifyN8nEvent::dispatch('ticket.queued.no_attendant', $ticket->id);
-                    }
-                }
+            if ($isMenuReset) {
+                $ticket->forceFill(['sector_id' => null, 'assigned_to' => null, 'status' => 'menu'])->save();
+                $replies[] = $this->menu->start($ticket);
+            } elseif (! $justCreated && $ticket->status === 'menu' && $isText) {
+                $result   = $this->menu->consume($ticket, $body);
+                $replies[] = $result['reply'];
+                $assign    = $result['done'] && $result['sector'];
             } elseif ($ticket->status === 'queued' && ! $ticket->assigned_to && $isText) {
                 $state = $ticket->menu_state ?: [];
                 if (empty($state['queue_notified'])) {
-                    $reply = strtr(config('helpdesk.menu.no_attendant'), ['{position}' => '—']);
-                    $this->replyAndPersist($ticket, $channel, $jid, $reply);
+                    $replies[] = strtr(config('helpdesk.menu.no_attendant'), ['{position}' => '—']);
                     $state['queue_notified'] = true;
                     $ticket->menu_state = $state;
                     $ticket->save();
@@ -133,20 +134,50 @@ class ConversationOrchestrator
             }
 
             if (in_array($ticket->status, ['open', 'pending'], true) && $ticket->sector_id && $isText) {
-                $sector     = $ticket->sector;
-                $aiSettings = $sector?->ai_settings ?? [];
+                $aiSettings = $ticket->sector?->ai_settings ?? [];
                 if (! empty($aiSettings['ai_enabled']) && ! empty($aiSettings['n8n_webhook_path'])) {
-                    \App\Jobs\TriggerAiWebhook::dispatch($aiSettings['n8n_webhook_path'], [
-                        'tenant_id'   => $tenantId,
-                        'ticket_id'   => $ticket->id,
-                        'sector_id'   => $ticket->sector_id,
-                        'prompt'      => $aiSettings['ai_prompt'] ?? '',
-                        'message'     => $message->body,
-                        'client'      => ['phone' => $client->phone, 'name' => $client->name],
-                    ]);
+                    $ai = [
+                        'path'    => $aiSettings['n8n_webhook_path'],
+                        'payload' => [
+                            'tenant_id' => $tenantId,
+                            'ticket_id' => $ticket->id,
+                            'sector_id' => $ticket->sector_id,
+                            'prompt'    => $aiSettings['ai_prompt'] ?? '',
+                            'message'   => $message->body,
+                            'client'    => ['phone' => $client->phone, 'name' => $client->name],
+                        ],
+                    ];
                 }
             }
+
+            return compact('message', 'ticket', 'replies', 'assign', 'ai');
         });
+
+        // Phase 2 — after commit. Safe to talk to the network / queue now; a
+        // rollback above means none of this runs, so replies are never sent twice.
+        broadcast(new MessageReceived($outcome['message']))->toOthers();
+
+        $channel = $this->channels->resolve('evolution', $session->instance_name);
+        $jid     = $evt->remoteJid;
+        foreach ($outcome['replies'] as $text) {
+            $this->replyAndPersist($outcome['ticket'], $channel, $jid, $text);
+        }
+
+        if ($outcome['assign']) {
+            $ticket = $outcome['ticket']->refresh();
+            broadcast(new TicketQueued($ticket));
+            $assignee = $this->distributor->assign($ticket);
+            if ($assignee) {
+                broadcast(new TicketAssigned($ticket->refresh()));
+                NotifyN8nEvent::dispatch('ticket.assigned', $ticket->id);
+            } else {
+                NotifyN8nEvent::dispatch('ticket.queued.no_attendant', $ticket->id);
+            }
+        }
+
+        if ($outcome['ai']) {
+            \App\Jobs\TriggerAiWebhook::dispatch($outcome['ai']['path'], $outcome['ai']['payload']);
+        }
     }
 
     public function handleWebChatInbound(int $tenantId, string $phone, string $name, string $text, string $messageType = 'text'): void
@@ -257,11 +288,13 @@ class ConversationOrchestrator
 
     private function replyAndPersist($ticket, $channel, ?string $jid, string $text): void
     {
-        $resp = null;
+        $resp   = null;
+        $failed = false;
         if ($channel && $jid) {
             try {
                 $resp = $channel->sendText($jid, $text);
             } catch (\Throwable $e) {
+                $failed = true;
                 \Log::channel('evolution')->error('orchestrator.sendText failed', [
                     'ticket_id' => $ticket->id,
                     'class'     => get_class($e),
@@ -271,15 +304,16 @@ class ConversationOrchestrator
         }
 
         $message = Message::create([
-            'tenant_id'   => $ticket->tenant_id,
-            'ticket_id'   => $ticket->id,
-            'external_id' => $resp['key']['id'] ?? null,
-            'direction'   => 'outbound',
-            'type'        => 'text',
-            'body'        => $text,
-            'metadata'    => ['source' => 'bot'],
-            'status'      => 'sent',
-            'sent_at'     => now(),
+            'tenant_id'      => $ticket->tenant_id,
+            'ticket_id'      => $ticket->id,
+            'external_id'    => $resp['key']['id'] ?? null,
+            'direction'      => 'outbound',
+            'type'           => 'text',
+            'body'           => $text,
+            'metadata'       => ['source' => 'bot'],
+            'status'         => $failed ? 'failed' : 'sent',
+            'failure_reason' => $failed ? 'sendText threw' : null,
+            'sent_at'        => $failed ? null : now(),
         ]);
         $ticket->increment('messages_count');
         $ticket->update(['last_message_at' => now()]);

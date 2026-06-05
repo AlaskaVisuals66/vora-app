@@ -9,6 +9,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ProcessIncomingWhatsappEvent implements ShouldQueue
 {
@@ -18,6 +20,17 @@ class ProcessIncomingWhatsappEvent implements ShouldQueue
     public function backoff(): array { return [5, 15, 30, 60, 120]; }
 
     public function __construct(public array $payload) {}
+
+    /** Dead-letter visibility: log when an inbound event is permanently dropped. */
+    public function failed(?Throwable $e): void
+    {
+        Log::channel('webhooks')->error('inbound.permanently_failed', [
+            'event'     => $this->payload['event'] ?? null,
+            'instance'  => $this->payload['instance'] ?? null,
+            'messageId' => $this->payload['data']['key']['id'] ?? null,
+            'error'     => $e?->getMessage(),
+        ]);
+    }
 
     public function handle(ConversationOrchestrator $orchestrator): void
     {
