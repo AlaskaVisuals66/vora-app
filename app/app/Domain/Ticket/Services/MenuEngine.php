@@ -4,17 +4,16 @@ namespace App\Domain\Ticket\Services;
 
 use App\Domain\Sector\Models\Sector;
 use App\Domain\Ticket\Models\Ticket;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
  * Stateful menu walker. Persists state inside Ticket::menu_state JSON.
  *
- * Tree (default seed):
- *   1 - Comercial
- *   2 - Financeiro
- *   3 - Manutenção
- *       1 - Assessoria Técnica
- *       2 - Assessoria Científica
+ * The menu is rendered DYNAMICALLY from the tenant's active sectors and the
+ * user's reply is matched by POSITION (the number shown). This guarantees the
+ * options displayed always correspond to a routable sector — no drift between
+ * a hardcoded banner and the DB rows used for routing.
  */
 class MenuEngine
 {
@@ -26,7 +25,7 @@ class MenuEngine
     {
         $ticket->menu_state = ['step' => self::STATE_ROOT, 'path' => []];
         $ticket->save();
-        return config('helpdesk.menu.welcome');
+        return $this->renderRootMenu($ticket->tenant_id);
     }
 
     /**
@@ -46,27 +45,24 @@ class MenuEngine
         $tenantId = $ticket->tenant_id;
 
         if ($state['step'] === self::STATE_ROOT) {
-            $sector = Sector::query()
-                ->where('tenant_id', $tenantId)
-                ->whereNull('parent_id')
-                ->where('active', true)
-                ->where('menu_key', $input)
-                ->first();
+            $roots  = $this->rootSectors($tenantId);
+            $sector = $this->pick($roots, $input);
 
             if (! $sector) {
-                return ['reply' => config('helpdesk.menu.welcome'), 'sector' => null, 'done' => false, 'invalid' => true];
+                return $this->invalid();
             }
 
             $state['path'][] = $sector->id;
 
             // Has subsectors? -> ask submenu
-            if ($sector->children()->where('active', true)->exists()) {
+            $children = $this->childSectors($sector->id);
+            if ($children->isNotEmpty()) {
                 $state['step']      = self::STATE_SUBMENU;
                 $state['parent_id'] = $sector->id;
                 $ticket->menu_state = $state;
                 $ticket->save();
                 return [
-                    'reply'   => $this->renderSubmenu($sector),
+                    'reply'   => $this->renderSubmenu($sector, $children),
                     'sector'  => null,
                     'done'    => false,
                     'invalid' => false,
@@ -77,23 +73,57 @@ class MenuEngine
         }
 
         if ($state['step'] === self::STATE_SUBMENU) {
-            $sector = Sector::query()
-                ->where('tenant_id', $tenantId)
-                ->where('parent_id', $state['parent_id'])
-                ->where('active', true)
-                ->where('menu_key', $input)
-                ->first();
+            $children = $this->childSectors($state['parent_id'] ?? 0);
+            $sector   = $this->pick($children, $input);
 
             if (! $sector) {
-                $parent = Sector::query()->find($state['parent_id']);
-                return ['reply' => $parent ? $this->renderSubmenu($parent) : config('helpdesk.menu.welcome'), 'sector' => null, 'done' => false, 'invalid' => true];
+                return $this->invalid();
             }
 
             $state['path'][] = $sector->id;
             return $this->resolveSector($ticket, $sector, $state);
         }
 
-        return ['reply' => config('helpdesk.menu.welcome'), 'sector' => null, 'done' => false, 'invalid' => true];
+        return $this->invalid();
+    }
+
+    /** Active root sectors for the tenant, in display order. */
+    private function rootSectors(int $tenantId): Collection
+    {
+        return Sector::query()
+            ->where('tenant_id', $tenantId)
+            ->whereNull('parent_id')
+            ->where('active', true)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get()
+            ->values();
+    }
+
+    /** Active children of a sector, in display order. */
+    private function childSectors(int $parentId): Collection
+    {
+        return Sector::query()
+            ->where('parent_id', $parentId)
+            ->where('active', true)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get()
+            ->values();
+    }
+
+    /** Map the typed number to the Nth sector (1-based). Null if out of range / not a number. */
+    private function pick(Collection $sectors, string $input): ?Sector
+    {
+        if ($input === '' || ! ctype_digit($input)) {
+            return null;
+        }
+        return $sectors->get((int) $input - 1);
+    }
+
+    private function invalid(): array
+    {
+        return ['reply' => config('helpdesk.menu.invalid'), 'sector' => null, 'done' => false, 'invalid' => true];
     }
 
     private function resolveSector(Ticket $ticket, Sector $sector, array $state): array
@@ -113,19 +143,25 @@ class MenuEngine
         return ['reply' => $reply, 'sector' => $sector, 'done' => true, 'invalid' => false];
     }
 
-    private function renderSubmenu(Sector $parent): string
+    private function renderRootMenu(int $tenantId): string
     {
-        $children = $parent->children()->where('active', true)->orderBy('order')->get();
-        $lines = [];
-        foreach ($children as $c) {
-            $lines[] = "{$c->menu_key} - {$c->name}";
-        }
-        $base = config('helpdesk.menu.maintenance_submenu');
-        // If submenu is for "Manutenção" specifically use template; else render dynamic
-        if (Str::lower($parent->slug) === 'manutencao' || Str::lower($parent->slug) === 'manutenção') {
-            return $base;
-        }
+        $sectors = $this->rootSectors($tenantId);
 
-        return "Você escolheu {$parent->name}. Selecione:\n\n".implode("\n", $lines);
+        $options = $sectors->isEmpty()
+            ? 'Nenhum setor disponível no momento.'
+            : $sectors->map(fn (Sector $s, int $i) => ($i + 1).' - '.$s->name)->implode("\n");
+
+        $tpl = (string) config('helpdesk.menu.welcome');
+
+        return str_contains($tpl, '{options}')
+            ? str_replace('{options}', $options, $tpl)
+            : $tpl."\n\n".$options;
+    }
+
+    private function renderSubmenu(Sector $parent, Collection $children): string
+    {
+        $lines = $children->map(fn (Sector $c, int $i) => ($i + 1).' - '.$c->name)->implode("\n");
+
+        return "Você escolheu {$parent->name}. Selecione:\n\n".$lines;
     }
 }

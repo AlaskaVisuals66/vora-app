@@ -24,7 +24,10 @@ class ProcessIncomingWhatsappEvent implements ShouldQueue
         $evt = WebhookEventDTO::fromPayload($this->payload);
 
         match ($evt->event) {
-            'messages.upsert', 'messages.update' => $orchestrator->handleInbound($evt),
+            // Only NEW messages are inbound. messages.update is a delivery/read
+            // receipt (no data.message) — processing it created duplicate empty
+            // Message rows and re-triggered the menu. Ignore it here.
+            'messages.upsert' => $orchestrator->handleInbound($evt),
             default => null, // future handlers (connection.update, qrcode.updated…)
         };
     }

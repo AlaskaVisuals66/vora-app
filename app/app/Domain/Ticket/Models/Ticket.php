@@ -18,7 +18,7 @@ class Ticket extends Model
 
     protected $fillable = [
         'tenant_id','protocol','client_id','sector_id','assigned_to','whatsapp_session_id',
-        'status','priority','channel','subject','menu_state',
+        'status','priority','channel','channel_type','subject','menu_state',
         'first_response_seconds','resolution_seconds','messages_count',
         'queued_at','assigned_at','first_response_at','last_message_at','closed_at',
     ];
