@@ -102,7 +102,7 @@ class TicketController extends Controller
                 'media' => ['required','file','max:51200','mimetypes:'.implode(',', [
                     'image/jpeg','image/png','image/webp','image/gif',
                     'video/mp4','video/3gpp','video/quicktime',
-                    'audio/ogg','audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/webm',
+                    'audio/ogg','video/ogg','application/ogg','audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/webm','video/webm','audio/x-wav','audio/x-m4a',
                     'application/pdf','application/msword',
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                     'application/vnd.ms-excel',
