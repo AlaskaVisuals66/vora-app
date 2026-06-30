@@ -212,13 +212,6 @@ onMounted(() => {
                     :class="!activeSession ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:bg-muted/60'">
                     <Inbox class="h-3.5 w-3.5" /> Todos
                 </button>
-                <button
-                    v-for="s in sessions" :key="s.id"
-                    @click="selectSession(s.id)"
-                    class="shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition-colors"
-                    :class="activeSession === s.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:bg-muted/60'">
-                    {{ sessionLabel(s) }}
-                </button>
             </div>
 
             <Card>

@@ -54,7 +54,6 @@ const statusLabel = computed(() => ({
                 </span>
             </div>
             <div class="flex items-center gap-1.5 mt-1.5">
-                <span class="text-[11px] text-muted-foreground font-mono">#{{ ticket.protocol }}</span>
                 <Badge :variant="statusVariant" class="text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
             </div>
             <div v-if="ticket.subject" class="text-[11.5px] text-muted-foreground truncate mt-1">{{ ticket.subject }}</div>

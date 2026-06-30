@@ -192,7 +192,7 @@ async function wipeAll() {
                     </CardContent>
                 </Card>
 
-                <Card class="border-destructive/40">
+                <Card v-if="false" class="border-destructive/40">
                     <CardHeader>
                         <CardTitle class="text-base flex items-center gap-2">
                             <Eraser class="h-4 w-4 text-destructive" />

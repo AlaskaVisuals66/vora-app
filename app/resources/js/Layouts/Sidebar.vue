@@ -17,7 +17,6 @@ const allNav = [
     { label: 'Conversas',     icon: MessagesSquare,  href: '/conversations' },
     { label: 'Contatos',      icon: BookUser,        href: '/contacts' },
     { label: 'Usuários',      icon: Users,           href: '/users',       adminOnly: true },
-    { label: 'Configurações', icon: Settings,        href: '/settings',    adminOnly: true },
     { label: 'Manutenção',    icon: Wrench,          href: '/admin/maintenance', adminOnly: true },
 ];
 const nav = computed(() => allNav.filter(item => !item.adminOnly || isAdmin.value));
