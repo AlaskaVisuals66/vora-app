@@ -98,17 +98,16 @@ class TicketController extends Controller
         $hasMedia = $request->hasFile('media');
 
         if ($hasMedia) {
+            \Log::channel('webhooks')->info('media.upload', [
+                'mime'        => $request->file('media')?->getMimeType(),
+                'client_mime' => $request->file('media')?->getClientMimeType(),
+                'ext'         => $request->file('media')?->getClientOriginalExtension(),
+                'size'        => $request->file('media')?->getSize(),
+            ]);
+            // Atendentes são autenticados/confiáveis — aceitamos qualquer arquivo até 50MB.
+            // (A checagem estrita de mimetype rejeitava áudios gravados pelo navegador.)
             $data = $request->validate([
-                'media' => ['required','file','max:51200','mimetypes:'.implode(',', [
-                    'image/jpeg','image/png','image/webp','image/gif',
-                    'video/mp4','video/3gpp','video/quicktime',
-                    'audio/ogg','video/ogg','application/ogg','audio/mpeg','audio/mp4','audio/aac','audio/wav','audio/webm','video/webm','audio/x-wav','audio/x-m4a',
-                    'application/pdf','application/msword',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/vnd.ms-excel',
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    'text/plain',
-                ])],
+                'media' => ['required','file','max:51200'],
                 'body'  => ['nullable','string','max:8000'],
             ]);
             $message = $this->outbound->sendMedia(
