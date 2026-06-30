@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/vora/PageHeader.vue';
 import { Card, CardContent } from '@/Components/ui/card';
-import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
@@ -229,7 +229,7 @@ onMounted(() => {
                     <ul v-else-if="clients.length" class="divide-y divide-border">
                         <li v-for="c in clients" :key="c.id"
                             class="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
-                            <Avatar class="h-9 w-9 shrink-0"><AvatarFallback>{{ initials(c.name || c.phone) }}</AvatarFallback></Avatar>
+                            <Avatar class="h-9 w-9 shrink-0"><AvatarImage v-if="c.avatar_url" :src="c.avatar_url" :alt="c.name" /><AvatarFallback>{{ initials(c.name || c.phone) }}</AvatarFallback></Avatar>
                             <div class="min-w-0 flex-1">
                                 <div class="truncate text-[14px] font-medium text-foreground">{{ c.name || c.phone }}</div>
                                 <div class="flex items-center gap-1.5 text-[12px] text-muted-foreground font-mono flex-wrap">

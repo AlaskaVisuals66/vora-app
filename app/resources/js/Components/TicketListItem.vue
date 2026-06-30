@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
 import { useFormat } from '@/Composables/useFormat';
 import { cn } from '@/lib/utils';
@@ -40,7 +40,7 @@ const statusLabel = computed(() => ({
                 ? 'bg-primary/[0.04] border-primary/20'
                 : 'border-transparent hover:bg-muted/60 hover:border-border'
         )">
-        <Avatar><AvatarFallback>{{ initials(ticket.client?.name || ticket.client?.phone) }}</AvatarFallback></Avatar>
+        <Avatar><AvatarImage v-if="ticket.client?.avatar_url" :src="ticket.client.avatar_url" :alt="ticket.client?.name" /><AvatarFallback>{{ initials(ticket.client?.name || ticket.client?.phone) }}</AvatarFallback></Avatar>
         <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between gap-2">
                 <span :class="cn(
