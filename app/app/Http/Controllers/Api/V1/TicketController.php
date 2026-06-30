@@ -25,7 +25,7 @@ class TicketController extends Controller
     {
         $user = $request->user();
         $query = Ticket::query()
-            ->with(['client','assignee:id,name','sector:id,name,color','tags'])
+            ->with(['client','assignee:id,name','sector:id,name,color','tags','latestMessage'])
             ->where('tenant_id', $user->tenant_id)
             ->latest('last_message_at');
 

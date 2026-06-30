@@ -29,6 +29,15 @@ const statusLabel = computed(() => ({
     queued: 'Em fila', open: 'Atendendo', pending: 'Aguardando',
     resolved: 'Resolvido', closed: 'Encerrado', menu: 'Menu',
 }[props.ticket.status] || props.ticket.status));
+
+const preview = computed(() => {
+    const m = props.ticket.latest_message;
+    if (!m) return props.ticket.subject || '';
+    const prefix = m.direction === 'outbound' ? 'Você: ' : '';
+    const mediaLabels = { image: '📷 Imagem', sticker: '📷 Figurinha', audio: '🎤 Áudio', video: '🎥 Vídeo', document: '📄 Documento' };
+    const text = (m.type && m.type !== 'text') ? (mediaLabels[m.type] || '📎 Mídia') : (m.body || '');
+    return prefix + text;
+});
 </script>
 
 <template>
@@ -54,7 +63,7 @@ const statusLabel = computed(() => ({
                 </span>
             </div>
             <div class="mt-1.5 flex items-center justify-between gap-2">
-                <span class="truncate text-[11.5px] text-muted-foreground">{{ ticket.subject || '' }}</span>
+                <span class="truncate text-[12px] text-muted-foreground">{{ preview }}</span>
                 <Badge :variant="statusVariant" class="shrink-0 text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
             </div>
         </div>

@@ -66,7 +66,7 @@ class ImportInstanceContacts implements ShouldQueue
             if (str_ends_with($jid, '@g.us') || str_contains($jid, 'broadcast')) {
                 continue;
             }
-            $phone = preg_replace('/\D+/', '', explode('@', $jid)[0]);
+            $phone = \App\Support\Phone::canonical(explode('@', $jid)[0]);
             if (strlen($phone) < 8) {
                 continue;
             }

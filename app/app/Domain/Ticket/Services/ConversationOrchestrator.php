@@ -63,9 +63,10 @@ class ConversationOrchestrator
         $outcome = DB::transaction(function () use ($evt, $session, $tenantId) {
             // Lock the client row so two concurrent inbound messages can't each
             // create a separate "active" ticket for the same conversation.
+            $phone = \App\Support\Phone::canonical($evt->fromNumber);
             $client = Client::firstOrCreate(
-                ['tenant_id' => $tenantId, 'phone' => $evt->fromNumber],
-                ['name' => $evt->pushName, 'whatsapp_jid' => $evt->remoteJid, 'channel_type' => 'whatsapp']
+                ['tenant_id' => $tenantId, 'phone' => $phone],
+                ['name' => $evt->pushName, 'whatsapp_jid' => $evt->remoteJid]
             );
             $client = Client::query()->whereKey($client->id)->lockForUpdate()->first() ?? $client;
             $client->forceFill(['last_message_at' => now()])->save();

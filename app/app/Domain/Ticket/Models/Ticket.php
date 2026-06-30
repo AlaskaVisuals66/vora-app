@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Ticket extends Model
 {
@@ -36,6 +37,7 @@ class Ticket extends Model
     public function sector(): BelongsTo  { return $this->belongsTo(Sector::class); }
     public function assignee(): BelongsTo { return $this->belongsTo(User::class, 'assigned_to'); }
     public function messages(): HasMany  { return $this->hasMany(Message::class); }
+    public function latestMessage(): HasOne { return $this->hasOne(Message::class)->latestOfMany(); }
     public function transfers(): HasMany { return $this->hasMany(TicketTransfer::class); }
     public function tags(): BelongsToMany { return $this->belongsToMany(TicketTag::class, 'ticket_tag_pivot'); }
 
