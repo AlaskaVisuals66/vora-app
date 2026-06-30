@@ -19,8 +19,24 @@ class ChannelManager
     {
         $channelType = $ticket->channel;
 
-        if ($channelType === 'whatsapp' && $ticket->whatsapp_session_id) {
-            $session = WhatsappSession::find($ticket->whatsapp_session_id);
+        if ($channelType === 'whatsapp') {
+            $session = $ticket->whatsapp_session_id
+                ? WhatsappSession::find($ticket->whatsapp_session_id)
+                : null;
+
+            // If the ticket's number is missing or disconnected, fall back to the
+            // tenant's primary connected number so replies still go out (avoids
+            // sending through a logged-out instance -> "Connection Closed").
+            if (! $session || ! in_array($session->state, ['connected', 'open'], true)) {
+                $fallback = WhatsappSession::where('tenant_id', $ticket->tenant_id)
+                    ->whereIn('state', ['connected', 'open'])
+                    ->orderByDesc('is_primary')
+                    ->first();
+                if ($fallback) {
+                    $session = $fallback;
+                }
+            }
+
             if ($session) {
                 return $this->resolve('evolution', $session->instance_name);
             }

@@ -72,18 +72,25 @@ class ImportInstanceContacts implements ShouldQueue
             }
 
             $waName = trim((string) ($c['pushName'] ?? $c['name'] ?? $c['verifiedName'] ?? ''));
+            $picUrl = (is_string($c['profilePicUrl'] ?? null) && $c['profilePicUrl'] !== '') ? $c['profilePicUrl'] : null;
 
             $client = Client::firstOrCreate(
                 ['tenant_id' => $session->tenant_id, 'phone' => $phone],
                 [
                     'name'         => $waName !== '' ? $waName : $phone,
                     'whatsapp_jid' => $jid,
+                    'avatar_url'   => $picUrl,
                 ]
             );
 
             // Backfill the real WhatsApp name when we previously only had the phone.
             if ($waName !== '' && ($client->name === null || $client->name === $client->phone)) {
                 $client->update(['name' => $waName]);
+            }
+
+            // Backfill / refresh the WhatsApp profile photo whenever Evolution gives us one.
+            if ($picUrl !== null && $client->avatar_url !== $picUrl) {
+                $client->update(['avatar_url' => $picUrl]);
             }
 
             $client->sessions()->syncWithoutDetaching([
