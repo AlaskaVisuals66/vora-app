@@ -98,6 +98,14 @@ class ConversationOrchestrator
                 'status'      => 'delivered',
                 'delivered_at'=> now(),
             ]);
+
+            // Mídia: baixa e guarda no servidor assim que chega (enquanto a URL do
+            // WhatsApp está fresca) pra carregar instantâneo depois e nunca dar
+            // "mídia indisponível".
+            if (in_array($evt->messageType, ['image', 'audio', 'video', 'document', 'sticker'], true)) {
+                \App\Jobs\DownloadInboundMedia::dispatch($message->id);
+            }
+
             $ticket->increment('messages_count');
             $ticket->update(['last_message_at' => now()]);
 

@@ -47,6 +47,14 @@ class MessageMediaController extends Controller
         $session = $ticket && $ticket->whatsapp_session_id
             ? WhatsappSession::find($ticket->whatsapp_session_id)
             : null;
+        // Se o número do ticket sumiu/desconectou, usa o número primário conectado
+        // do tenant pra buscar a mídia (evita "indisponível" por instância morta).
+        if (!$session || !in_array($session->state, ['connected', 'open'], true)) {
+            $session = WhatsappSession::where('tenant_id', $tenantId)
+                ->whereIn('state', ['connected', 'open'])
+                ->orderByDesc('is_primary')
+                ->first() ?? $session;
+        }
         if (!$session) abort(404, 'Sessão não encontrada para essa mensagem.');
 
         // Resolve Evolution per-tenant (gateway settings) instead of global config.
