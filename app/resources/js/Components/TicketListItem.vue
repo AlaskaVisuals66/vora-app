@@ -53,10 +53,10 @@ const statusLabel = computed(() => ({
                     {{ fromNow(ticket.last_message_at || ticket.created_at) }}
                 </span>
             </div>
-            <div class="flex items-center gap-1.5 mt-1.5">
-                <Badge :variant="statusVariant" class="text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
+            <div class="mt-1.5 flex items-center justify-between gap-2">
+                <span class="truncate text-[11.5px] text-muted-foreground">{{ ticket.subject || '' }}</span>
+                <Badge :variant="statusVariant" class="shrink-0 text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
             </div>
-            <div v-if="ticket.subject" class="text-[11.5px] text-muted-foreground truncate mt-1">{{ ticket.subject }}</div>
         </div>
     </button>
 </template>

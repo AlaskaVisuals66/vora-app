@@ -544,7 +544,7 @@ onBeforeUnmount(() => {
                                     {{ store.active.client?.name || store.active.client?.phone }}
                                 </div>
                                 <div class="text-[11.5px] text-muted-foreground tabular-nums truncate">
-                                    #{{ store.active.protocol }} · {{ store.active.sector?.name || 'sem setor' }}
+                                    {{ store.active.sector?.name || 'sem setor' }}
                                 </div>
                             </div>
                         </div>

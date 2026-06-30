@@ -49,7 +49,7 @@ class OutboundMessageService
             $message->update(['status' => 'sent', 'sent_at' => now()]);
         }
 
-        $this->finalizeTicket($ticket);
+        $this->finalizeTicket($ticket, $sender);
         broadcast(new MessageSent($message))->toOthers();
         return $message;
     }
@@ -117,7 +117,7 @@ class OutboundMessageService
             $message->update(['status' => 'sent', 'sent_at' => now()]);
         }
 
-        $this->finalizeTicket($ticket);
+        $this->finalizeTicket($ticket, $sender);
         broadcast(new MessageSent($message))->toOthers();
         $message->load('attachments');
 
@@ -134,10 +134,18 @@ class OutboundMessageService
         };
     }
 
-    private function finalizeTicket(Ticket $ticket): void
+    private function finalizeTicket(Ticket $ticket, ?User $sender = null): void
     {
         $ticket->increment('messages_count');
         $ticket->update(['last_message_at' => now()]);
+
+        // Atendente respondeu -> sai da fila e passa a "Atendendo" (open), atribuído a ele.
+        if (in_array($ticket->status, ['queued', 'pending'], true)) {
+            $ticket->update([
+                'status'      => 'open',
+                'assigned_to' => $ticket->assigned_to ?: $sender?->id,
+            ]);
+        }
 
         if ($ticket->first_response_at === null) {
             $first = (int) now()->diffInSeconds($ticket->queued_at ?? $ticket->created_at);
