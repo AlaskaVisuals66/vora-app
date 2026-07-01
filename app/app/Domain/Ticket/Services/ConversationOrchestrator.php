@@ -87,7 +87,7 @@ class ConversationOrchestrator
                     'protocol'            => $this->protocols->next($tenantId),
                     'client_id'           => $client->id,
                     'whatsapp_session_id' => $session->id,
-                    'status'              => 'queued',
+                    'status'              => 'menu',
                     'channel'             => 'whatsapp',
                     'channel_type'        => 'whatsapp',
                 ]);
@@ -124,12 +124,45 @@ class ConversationOrchestrator
             $assign  = false;
             $ai      = null;
 
-            // Robô/menu DESLIGADO a pedido: nenhuma resposta automática ("Opção inválida",
-            // menu ou "aguarde na fila"). O atendente cuida de tudo. Conversa nova já entra
-            // em 'queued'; ticket antigo que ficou preso em 'menu' vira 'queued' aqui, sem
-            // responder nada ao cliente.
-            if (! $justCreated && $ticket->status === 'menu') {
-                $ticket->forceFill(['status' => 'queued'])->save();
+            if ($justCreated) {
+                $replies[] = $this->menu->start($ticket);
+            }
+
+            $isMenuReset = ! $justCreated && $isText
+                && Str::lower($body) === '#menu'
+                && in_array($ticket->status, ['queued','open','pending'], true);
+
+            if ($isMenuReset) {
+                $ticket->forceFill(['sector_id' => null, 'assigned_to' => null, 'status' => 'menu'])->save();
+                $replies[] = $this->menu->start($ticket);
+            } elseif (! $justCreated && $ticket->status === 'menu' && $isText) {
+                $result = $this->menu->consume($ticket, $body);
+                if (! empty($result['invalid'])) {
+                    // Cliente não escolheu um número válido. Damos 1 aviso; se insistir,
+                    // vai direto pro atendente (fila) em vez de repetir "Opção inválida"
+                    // pra sempre — assim conversa que já está rolando não trava no menu.
+                    $state = $ticket->menu_state ?: [];
+                    $tries = (int) ($state['invalid_tries'] ?? 0) + 1;
+                    if ($tries >= 2) {
+                        $ticket->forceFill(['status' => 'queued'])->save();
+                    } else {
+                        $state['invalid_tries'] = $tries;
+                        $ticket->menu_state = $state;
+                        $ticket->save();
+                        $replies[] = $result['reply'];
+                    }
+                } else {
+                    $replies[] = $result['reply'];
+                    $assign    = $result['done'] && $result['sector'];
+                }
+            } elseif ($ticket->status === 'queued' && ! $ticket->assigned_to && $isText) {
+                $state = $ticket->menu_state ?: [];
+                if (empty($state['queue_notified'])) {
+                    $replies[] = strtr(config('helpdesk.menu.no_attendant'), ['{position}' => '—']);
+                    $state['queue_notified'] = true;
+                    $ticket->menu_state = $state;
+                    $ticket->save();
+                }
             }
 
             if (in_array($ticket->status, ['open', 'pending'], true) && $ticket->sector_id && $isText) {
