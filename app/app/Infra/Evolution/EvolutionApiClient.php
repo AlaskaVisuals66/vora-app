@@ -129,17 +129,28 @@ class EvolutionApiClient
     }
 
     /** Fetch inbound media as base64 using the tenant-resolved credentials. Returns [] on failure. */
-    public function fetchMediaBase64(string $instance, string $messageId): array
+    public function fetchMediaBase64(string $instance, string $messageId, ?string $remoteJid = null): array
     {
         if ($messageId === '') {
             return [];
         }
+        // O Evolution costuma precisar da chave COMPLETA (remoteJid + fromMe), não só
+        // do id — passar só o id fazia getBase64 retornar 400 em vários áudios.
+        $key = ['id' => $messageId];
+        if ($remoteJid) {
+            $key['remoteJid'] = $remoteJid;
+            $key['fromMe']    = false;
+        }
         $resp = $this->client()->timeout(30)->post('/chat/getBase64FromMediaMessage/'.rawurlencode($instance), [
-            'message'      => ['key' => ['id' => $messageId]],
+            'message'      => ['key' => $key],
             'convertToMp4' => false,
         ]);
         if (! $resp->successful()) {
-            Log::channel('evolution')->error('getBase64 failed', ['instance' => $instance, 'status' => $resp->status()]);
+            Log::channel('evolution')->error('getBase64 failed', [
+                'instance' => $instance,
+                'status'   => $resp->status(),
+                'body'     => substr((string) $resp->body(), 0, 200),
+            ]);
             return [];
         }
         return $resp->json() ?? [];

@@ -60,7 +60,11 @@ class DownloadInboundMedia implements ShouldQueue
             return;
         }
 
-        $json = $evolution->fetchMediaBase64($session->instance_name, (string) $message->external_id);
+        $json = $evolution->fetchMediaBase64(
+            $session->instance_name,
+            (string) $message->external_id,
+            $ticket?->client?->whatsapp_jid
+        );
         $b64  = $json['base64'] ?? null;
         if (! $b64) {
             return; // sem bytes (mídia já expirou no WhatsApp) — não adianta retentar à toa
