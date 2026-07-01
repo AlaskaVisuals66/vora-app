@@ -52,6 +52,7 @@ RUN apk add --no-cache \
         supervisor \
         bash \
         curl \
+        ffmpeg \
         tini \
         icu-dev \
         oniguruma-dev \

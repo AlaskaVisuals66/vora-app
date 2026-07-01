@@ -92,7 +92,11 @@ class OutboundMessageService
 
             try {
                 if ($type === 'audio') {
-                    $resp = $channel->sendAudio($identifier, $publicUrl);
+                    // WhatsApp exige ogg/opus pra nota de voz. Convertemos o que o
+                    // navegador gravou (webm/ogg/mp4) pra ogg/opus antes de enviar.
+                    $oggPath  = $this->convertToOpus(Storage::disk($disk)->path($path), $dir, $disk);
+                    $audioUrl = $oggPath ? Storage::disk($disk)->url($oggPath) : $publicUrl;
+                    $resp = $channel->sendAudio($identifier, $audioUrl);
                 } else {
                     $mediaType = match ($type) {
                         'image'    => 'image',
@@ -132,6 +136,37 @@ class OutboundMessageService
             str_starts_with($mime, 'audio/')   => 'audio',
             default                             => 'document',
         };
+    }
+
+    /**
+     * Converte um áudio (webm/ogg/mp4 do navegador) para ogg/opus — o formato de
+     * nota de voz que o WhatsApp aceita. Devolve o path do ogg no disco, ou null se
+     * o ffmpeg falhar (aí o chamador usa o arquivo original como fallback).
+     */
+    private function convertToOpus(string $srcAbsPath, string $dir, string $disk): ?string
+    {
+        if (! is_file($srcAbsPath)) {
+            return null;
+        }
+        $tmp = tempnam(sys_get_temp_dir(), 'voice').'.ogg';
+        $cmd = sprintf(
+            'ffmpeg -y -i %s -vn -c:a libopus -b:a 32k -ar 48000 -ac 1 %s 2>&1',
+            escapeshellarg($srcAbsPath),
+            escapeshellarg($tmp)
+        );
+        @exec($cmd, $out, $code);
+        if ($code !== 0 || ! is_file($tmp) || filesize($tmp) === 0) {
+            @unlink($tmp);
+            \Log::channel('evolution')->warning('audio.convert_failed', [
+                'code' => $code,
+                'out'  => implode(' | ', array_slice((array) $out, -2)),
+            ]);
+            return null;
+        }
+        $path = "{$dir}/voice.ogg";
+        Storage::disk($disk)->put($path, file_get_contents($tmp));
+        @unlink($tmp);
+        return $path;
     }
 
     private function finalizeTicket(Ticket $ticket, ?User $sender = null): void
