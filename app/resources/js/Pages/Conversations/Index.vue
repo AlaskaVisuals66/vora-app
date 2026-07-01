@@ -144,6 +144,7 @@ const filtered = computed(() => {
 const typingNow = computed(() => Object.values(store.typingUsers).filter(t => Date.now() - t.at < 3000));
 
 const statusOptions = [
+    { value: '',        label: 'Todos' },
     { value: 'open',    label: 'Abertos' },
     { value: 'queued',  label: 'Em fila' },
     { value: 'pending', label: 'Aguardando' },
@@ -514,7 +515,7 @@ onBeforeUnmount(() => {
                             >
                                 <button
                                     v-for="s in statusOptions"
-                                    :key="s.value"
+                                    :key="s.value || 'todos'"
                                     @click="setStatus(s.value)"
                                     class="flex w-full items-center justify-between px-3 py-2 text-left text-[12.5px] transition-colors hover:bg-muted/60"
                                     :class="store.filters.status === s.value ? 'font-semibold text-foreground' : 'text-muted-foreground'"
