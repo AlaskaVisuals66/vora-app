@@ -46,6 +46,7 @@ export const useConversationsStore = defineStore('conversations', {
 
         async openTicket(id) {
             this.active = this.tickets.find((t) => t.id === id) || null;
+            if (this.active) this.active.unread_count = 0; // marca como lida ao abrir
             this.messages = [];
             this.messagesLoading = true;
             try {
@@ -81,13 +82,28 @@ export const useConversationsStore = defineStore('conversations', {
 
         pushIncomingMessage(msg) {
             if (!msg || !msg.id) return;
-            if (this.active && msg.ticket_id === this.active.id) {
+            const isActive = this.active && msg.ticket_id === this.active.id;
+            if (isActive) {
                 if (!this.messages.some((m) => m.id === msg.id)) {
                     this.messages.push(msg);
                 }
             }
             const t = this.tickets.find((t) => t.id === msg.ticket_id);
-            if (t) t.last_message_at = msg.timestamp || msg.sent_at || msg.delivered_at || msg.created_at;
+            if (t) {
+                t.last_message_at = msg.timestamp || msg.sent_at || msg.delivered_at || msg.created_at;
+                t.latest_message = msg; // preview da última mensagem na lista, ao vivo
+                // Badge de não lidas: conta só mensagem recebida do cliente enquanto a
+                // conversa NÃO está aberta.
+                if (msg.direction === 'inbound' && !isActive) {
+                    t.unread_count = (t.unread_count || 0) + 1;
+                }
+                this.sortTickets(); // sobe a conversa pro topo
+            }
+        },
+
+        sortTickets() {
+            this.tickets.sort((a, b) =>
+                new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0));
         },
 
         upsertTicket(ticket) {
@@ -108,10 +124,12 @@ export const useConversationsStore = defineStore('conversations', {
             const matchesSector = !sectorFilter || ticketSectorId === sectorFilter;
             if (idx >= 0) {
                 if (!matchesSector) { this.tickets.splice(idx, 1); return; }
-                this.tickets[idx] = { ...this.tickets[idx], ...ticket };
+                // Preserva o contador de não lidas (o servidor não manda esse campo).
+                this.tickets[idx] = { ...this.tickets[idx], ...ticket, unread_count: this.tickets[idx].unread_count };
             } else if (matchesSector) {
                 this.tickets.unshift(ticket);
             }
+            this.sortTickets();
         },
 
         setTyping(ticketId, userId, name) {

@@ -38,6 +38,8 @@ const preview = computed(() => {
     const text = (m.type && m.type !== 'text') ? (mediaLabels[m.type] || '📎 Mídia') : (m.body || '');
     return prefix + text;
 });
+
+const unread = computed(() => (props.ticket.unread_count || 0) > 0);
 </script>
 
 <template>
@@ -58,13 +60,19 @@ const preview = computed(() => {
                 )">
                     {{ ticket.client?.name || ticket.client?.phone }}
                 </span>
-                <span class="text-[10.5px] text-muted-foreground whitespace-nowrap font-medium tabular-nums">
+                <span :class="cn('text-[10.5px] whitespace-nowrap font-medium tabular-nums', unread ? 'text-green-500 font-semibold' : 'text-muted-foreground')">
                     {{ fromNow(ticket.last_message_at || ticket.created_at) }}
                 </span>
             </div>
             <div class="mt-1.5 flex items-center justify-between gap-2">
-                <span class="truncate text-[12px] text-muted-foreground">{{ preview }}</span>
-                <Badge :variant="statusVariant" class="shrink-0 text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
+                <span class="truncate text-[12px]" :class="unread ? 'text-foreground font-medium' : 'text-muted-foreground'">{{ preview }}</span>
+                <div class="flex shrink-0 items-center gap-1.5">
+                    <Badge :variant="statusVariant" class="text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
+                    <span v-if="unread"
+                          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-green-500 px-1 text-[10.5px] font-bold text-white tabular-nums">
+                        {{ ticket.unread_count > 99 ? '99+' : ticket.unread_count }}
+                    </span>
+                </div>
             </div>
         </div>
     </button>
