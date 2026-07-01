@@ -46,14 +46,6 @@ const statusLabel = computed(() => ({
         <div class="px-6 py-5 space-y-4">
             <div class="grid grid-cols-1 gap-4 text-[13px]">
                 <div class="flex items-start gap-3">
-                    <Hash class="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <div class="min-w-0">
-                        <div class="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground font-medium mb-0.5">Protocolo</div>
-                        <div class="font-mono text-[12.5px] text-foreground">#{{ ticket.protocol }}</div>
-                    </div>
-                </div>
-
-                <div class="flex items-start gap-3">
                     <UserCheck class="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <div class="min-w-0">
                         <div class="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground font-medium mb-1">Status</div>

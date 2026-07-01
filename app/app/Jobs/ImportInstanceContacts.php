@@ -88,9 +88,10 @@ class ImportInstanceContacts implements ShouldQueue
                 $client->update(['name' => $waName]);
             }
 
-            // Backfill / refresh the WhatsApp profile photo whenever Evolution gives us one.
-            if ($picUrl !== null && $client->avatar_url !== $picUrl) {
-                $client->update(['avatar_url' => $picUrl]);
+            // Foto de perfil: baixa a imagem pro servidor (a URL do WhatsApp expira),
+            // trocando o avatar_url por uma URL local permanente.
+            if ($picUrl !== null) {
+                \App\Jobs\DownloadClientAvatar::dispatch($client->id, $picUrl);
             }
 
             $client->sessions()->syncWithoutDetaching([
