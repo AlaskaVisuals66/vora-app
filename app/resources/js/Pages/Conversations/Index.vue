@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuIte
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
+import { notifyNewMessage, requestNotifyPermission } from '@/lib/notify';
 import { Search, Send, MessagesSquare, Inbox, SlidersHorizontal, Check, ArrowLeft, MoreVertical, X, ArrowRightLeft, Paperclip, PanelLeft } from 'lucide-vue-next';
 import AudioRecorder from '@/Components/AudioRecorder.vue';
 import { toast } from 'vue-sonner';
@@ -232,6 +233,12 @@ function subscribeTenant() {
         .listen('.message.received', (e) => {
             store.pushIncomingMessage(e.message);
             store.upsertTicket(e.ticket);
+            // Notifica (som + título piscando) quando chega mensagem do cliente e não é
+            // a conversa aberta/em foco.
+            if (e.message?.direction === 'inbound' &&
+                (e.message.ticket_id !== store.active?.id || !document.hasFocus())) {
+                notifyNewMessage(e.message);
+            }
             scrollToBottom();
         })
         .listen('.message.sent', (e) => {
@@ -310,6 +317,7 @@ onMounted(async () => {
     // Scope realtime events to the user's sectors before subscribing, so an
     // attendant never receives tickets from sectors that aren't theirs.
     store.setAccess(isAdmin.value, user.value?.sector_ids ?? []);
+    requestNotifyPermission();
     subscribeTenant();
     await loadSectors();
     await resolveSectorFromSlug();
