@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Check, CheckCheck, Clock, AlertCircle, Image as ImageIcon, Mic, Video as VideoIcon, FileText, Loader2, Download, X, Play, Pause } from 'lucide-vue-next';
 import { useFormat } from '@/Composables/useFormat';
 import axios from 'axios';
@@ -30,13 +30,29 @@ async function fetchMedia() {
     }
 }
 
+const rootEl = ref(null);
+let observer = null;
+
 watch(() => props.message.id, () => {
     if (mediaUrl.value) { URL.revokeObjectURL(mediaUrl.value); mediaUrl.value = null; }
     mediaError.value = false;
-    fetchMedia();
-}, { immediate: true });
+}, { immediate: false });
+
+// Lazy-load: só busca a mídia quando a mensagem chega perto da tela.
+// Evita disparar dezenas de requisições ao abrir a conversa (delay + "Too Many Attempts").
+onMounted(() => {
+    if (!needsFetch.value) return;
+    observer = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+            fetchMedia();
+            observer?.disconnect();
+        }
+    }, { rootMargin: '250px' });
+    if (rootEl.value) observer.observe(rootEl.value);
+});
 
 onBeforeUnmount(() => {
+    observer?.disconnect();
     if (mediaUrl.value) URL.revokeObjectURL(mediaUrl.value);
 });
 
@@ -134,7 +150,7 @@ function fmtDur(s) {
     </div>
 
     <!-- Inbound / Outbound -->
-    <div v-else :class="['flex mb-2.5', isInbound ? 'justify-start' : 'justify-end']">
+    <div v-else ref="rootEl" :class="['flex mb-2.5', isInbound ? 'justify-start' : 'justify-end']">
         <div :class="[
             'max-w-[480px] px-3.5 py-2.5 text-[13.5px] leading-relaxed shadow-card',
             isInbound

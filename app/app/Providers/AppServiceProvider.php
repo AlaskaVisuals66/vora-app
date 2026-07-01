@@ -17,7 +17,9 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
 
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            // Abrir uma conversa dispara várias requisições (mídia por mensagem);
+            // 60/min estourava o limite ("Too Many Attempts"). Subimos pra 300/min.
+            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
         });
 
         RateLimiter::for('auth', function (Request $request) {

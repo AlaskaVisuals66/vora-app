@@ -79,7 +79,7 @@ class TicketController extends Controller
             )
             ->pluck('id');
 
-        $perPage = min(1000, max(50, (int) $request->get('per_page', 500)));
+        $perPage = min(1000, max(50, (int) $request->get('per_page', 80)));
 
         $messages = Message::query()
             ->whereIn('ticket_id', $ticketIds)
