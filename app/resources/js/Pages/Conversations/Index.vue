@@ -196,8 +196,12 @@ function onFileSelect(e) {
 }
 
 async function sendMediaFile(file) {
-    await store.sendMedia(file);
-    await scrollToBottom();
+    try {
+        await store.sendMedia(file);
+        await scrollToBottom();
+    } catch (e) {
+        toast.error(e.response?.data?.message || 'Falha ao enviar o arquivo. Tente de novo.');
+    }
 }
 
 function onDragOver(e) { e.preventDefault(); isDragging.value = true; }

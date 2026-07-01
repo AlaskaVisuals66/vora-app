@@ -72,9 +72,9 @@ export const useConversationsStore = defineStore('conversations', {
             const fd = new FormData();
             fd.append('media', file);
             if (caption) fd.append('body', caption);
-            const { data } = await axios.post(`/api/v1/tickets/${this.active.id}/messages`, fd, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            // NÃO setar Content-Type na mão: o axios/navegador precisa adicionar o
+            // boundary do multipart automaticamente, senão o servidor não lê o arquivo.
+            const { data } = await axios.post(`/api/v1/tickets/${this.active.id}/messages`, fd);
             const msg = data.data || data;
             this.messages.push(msg);
         },
