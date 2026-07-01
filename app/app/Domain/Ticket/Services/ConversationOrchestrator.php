@@ -27,7 +27,7 @@ class ConversationOrchestrator
 
     public function handleInbound(WebhookEventDTO $evt): void
     {
-        if ($evt->fromMe || ! $evt->fromNumber) return;
+        if (! $evt->fromNumber) return;
 
         $session = WhatsappSession::where('instance_name', $evt->instance)->first();
         if (! $session) {
@@ -47,6 +47,13 @@ class ConversationOrchestrator
         }
         $tenantId = $session->tenant_id;
         app()->instance('tenant.id', $tenantId);
+
+        // Mensagem enviada pelo próprio número (o atendente respondeu direto pelo app
+        // do WhatsApp): espelha como OUTBOUND na conversa, sem menu/auto-resposta.
+        if ($evt->fromMe) {
+            $this->mirrorOutbound($evt, $session);
+            return;
+        }
 
         // Idempotency: Evolution can re-deliver the same message (retries, upsert).
         // If we've already ingested this inbound id, do nothing — never re-send.
@@ -326,6 +333,66 @@ class ConversationOrchestrator
         ]);
         $ticket->increment('messages_count');
         $ticket->update(['last_message_at' => now()]);
+        broadcast(new MessageReceived($message))->toOthers();
+    }
+
+    /**
+     * Espelha uma mensagem enviada pelo próprio número (fromMe) — o atendente
+     * respondeu direto pelo app do WhatsApp — como mensagem OUTBOUND na conversa,
+     * pra ela aparecer no sistema também.
+     */
+    private function mirrorOutbound(WebhookEventDTO $evt, WhatsappSession $session): void
+    {
+        if (! $evt->messageId) {
+            return;
+        }
+        $tenantId = $session->tenant_id;
+
+        // Idempotência: se a mensagem já existe (o próprio sistema enviou, ou reentrega
+        // do Evolution), não duplica.
+        if (Message::query()->where('tenant_id', $tenantId)->where('external_id', $evt->messageId)->exists()) {
+            return;
+        }
+
+        $phone = \App\Support\Phone::canonical($evt->fromNumber);
+        if ($phone === '') {
+            return;
+        }
+
+        $client = Client::firstOrCreate(
+            ['tenant_id' => $tenantId, 'phone' => $phone],
+            ['name' => $evt->pushName ?: $phone, 'whatsapp_jid' => $evt->remoteJid]
+        );
+
+        $ticket = $client->activeTicket() ?? Ticket::create([
+            'tenant_id'           => $tenantId,
+            'protocol'            => $this->protocols->next($tenantId),
+            'client_id'           => $client->id,
+            'whatsapp_session_id' => $session->id,
+            'status'              => 'open',
+            'channel'             => 'whatsapp',
+            'channel_type'        => 'whatsapp',
+        ]);
+
+        $message = Message::create([
+            'tenant_id'   => $tenantId,
+            'ticket_id'   => $ticket->id,
+            'external_id' => $evt->messageId,
+            'direction'   => 'outbound',
+            'type'        => $evt->messageType,
+            'body'        => $evt->body,
+            'media'       => $evt->media,
+            'metadata'    => ['source' => 'whatsapp_app'],
+            'status'      => 'sent',
+            'sent_at'     => now(),
+        ]);
+        $ticket->increment('messages_count');
+        $ticket->update(['last_message_at' => now()]);
+
+        if (in_array($evt->messageType, ['image', 'audio', 'video', 'document', 'sticker'], true)) {
+            \App\Jobs\DownloadInboundMedia::dispatch($message->id);
+        }
+
         broadcast(new MessageReceived($message))->toOthers();
     }
 }
