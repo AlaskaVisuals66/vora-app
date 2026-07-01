@@ -60,19 +60,16 @@ const unread = computed(() => (props.ticket.unread_count || 0) > 0);
                 )">
                     {{ ticket.client?.name || ticket.client?.phone }}
                 </span>
-                <span :class="cn('text-[10.5px] whitespace-nowrap font-medium tabular-nums', unread ? 'text-green-500 font-semibold' : 'text-muted-foreground')">
+                <span :class="cn('text-[10.5px] whitespace-nowrap font-medium tabular-nums', unread ? 'text-orange-500 font-semibold' : 'text-muted-foreground')">
                     {{ fromNow(ticket.last_message_at || ticket.created_at) }}
                 </span>
             </div>
             <div class="mt-1.5 flex items-center justify-between gap-2">
                 <span class="truncate text-[12px]" :class="unread ? 'text-foreground font-medium' : 'text-muted-foreground'">{{ preview }}</span>
-                <div class="flex shrink-0 items-center gap-1.5">
-                    <Badge :variant="statusVariant" class="text-[10px] py-0 h-4">{{ statusLabel }}</Badge>
-                    <span v-if="unread"
-                          class="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-green-500 px-1 text-[10.5px] font-bold text-white tabular-nums">
-                        {{ ticket.unread_count > 99 ? '99+' : ticket.unread_count }}
-                    </span>
-                </div>
+                <span v-if="unread"
+                      class="flex h-[19px] min-w-[19px] shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-bold text-white tabular-nums">
+                    {{ ticket.unread_count > 99 ? '99+' : ticket.unread_count }}
+                </span>
             </div>
         </div>
     </button>

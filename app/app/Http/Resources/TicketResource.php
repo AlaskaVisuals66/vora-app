@@ -20,6 +20,16 @@ class TicketResource extends JsonResource
             'client'      => $this->whenLoaded('client'),
             'tags'        => $this->whenLoaded('tags'),
             'messages_count' => $this->messages_count,
+            'unread_count'   => (int) ($this->unread_count ?? 0),
+            'latest_message' => $this->whenLoaded('latestMessage', function () {
+                $m = $this->latestMessage;
+                return $m ? [
+                    'id'        => $m->id,
+                    'body'      => $m->body,
+                    'type'      => $m->type,
+                    'direction' => $m->direction,
+                ] : null;
+            }),
             'queued_at'   => $this->queued_at?->toIso8601String(),
             'assigned_at' => $this->assigned_at?->toIso8601String(),
             'last_message_at' => $this->last_message_at?->toIso8601String(),

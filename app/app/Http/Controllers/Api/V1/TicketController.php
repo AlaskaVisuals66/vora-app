@@ -63,6 +63,11 @@ class TicketController extends Controller
     {
         $this->authorizeTicket($request->user(), $ticket);
 
+        // Atendente abriu a conversa -> zera o contador de não lidas (bolinha laranja).
+        if ($ticket->unread_count) {
+            $ticket->forceFill(['unread_count' => 0])->save();
+        }
+
         // Show the contact's conversation history scoped to THIS sector, plus any
         // tickets not tied to a sector (bot/menu interactions and imported history,
         // which carry no sector_id). This keeps each department's conversation

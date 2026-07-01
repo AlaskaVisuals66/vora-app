@@ -115,6 +115,7 @@ class ConversationOrchestrator
             }
 
             $ticket->increment('messages_count');
+            $ticket->increment('unread_count'); // bolinha laranja de não lida na lista
             $ticket->update(['last_message_at' => now()]);
 
             $body   = is_string($evt->body) ? trim($evt->body) : '';
