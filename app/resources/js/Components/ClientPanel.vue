@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
 import { Separator } from '@/Components/ui/separator';
 import { useFormat } from '@/Composables/useFormat';
@@ -33,7 +33,7 @@ const statusLabel = computed(() => ({
            class="hidden lg:flex w-80 border-l border-border bg-card flex-col overflow-y-auto scrollbar-thin">
         <!-- Profile header -->
         <div class="px-6 pt-8 pb-6 text-center border-b border-border">
-            <Avatar class="mx-auto mb-4"><AvatarFallback>{{ initials(client.name || client.phone) }}</AvatarFallback></Avatar>
+            <Avatar class="mx-auto mb-4 h-16 w-16"><AvatarImage v-if="client.avatar_url" :src="client.avatar_url" :alt="client.name" /><AvatarFallback class="text-lg">{{ initials(client.name || client.phone) }}</AvatarFallback></Avatar>
             <h3 class="font-semibold text-foreground text-[15px] tracking-tight leading-tight">
                 {{ client.name || 'Sem nome' }}
             </h3>

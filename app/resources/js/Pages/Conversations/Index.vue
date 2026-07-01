@@ -5,7 +5,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import TicketListItem from '@/Components/TicketListItem.vue';
 import MessageBubble from '@/Components/MessageBubble.vue';
 import ClientPanel from '@/Components/ClientPanel.vue';
-import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/Components/ui/avatar';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -39,6 +39,7 @@ const ticketChannel = ref(null);
 const typingTimer = ref(null);
 const filterOpen = ref(false);
 const sectorPickerOpen = ref(false);
+const panelOpen = ref(false); // painel de detalhes do contato (direita) fica fechado por padrão
 
 const messagesWithDates = computed(() => {
     const out = [];
@@ -538,15 +539,21 @@ onBeforeUnmount(() => {
                             >
                                 <ArrowLeft class="h-4 w-4" />
                             </Button>
-                            <Avatar><AvatarFallback>{{ initials(store.active.client?.name || store.active.client?.phone) }}</AvatarFallback></Avatar>
-                            <div class="min-w-0">
-                                <div class="font-semibold text-foreground text-[14px] truncate">
-                                    {{ store.active.client?.name || store.active.client?.phone }}
+                            <button type="button" @click="panelOpen = !panelOpen" title="Ver detalhes do contato"
+                                    class="flex min-w-0 items-center gap-3 text-left transition hover:opacity-80">
+                                <Avatar class="shrink-0">
+                                    <AvatarImage v-if="store.active.client?.avatar_url" :src="store.active.client.avatar_url" :alt="store.active.client?.name" />
+                                    <AvatarFallback>{{ initials(store.active.client?.name || store.active.client?.phone) }}</AvatarFallback>
+                                </Avatar>
+                                <div class="min-w-0">
+                                    <div class="font-semibold text-foreground text-[14px] truncate">
+                                        {{ store.active.client?.name || store.active.client?.phone }}
+                                    </div>
+                                    <div class="text-[11.5px] text-muted-foreground tabular-nums truncate">
+                                        {{ store.active.sector?.name || 'sem setor' }}
+                                    </div>
                                 </div>
-                                <div class="text-[11.5px] text-muted-foreground tabular-nums truncate">
-                                    {{ store.active.sector?.name || 'sem setor' }}
-                                </div>
-                            </div>
+                            </button>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
                             <Badge :variant="statusVariant">{{ statusLabel }}</Badge>
@@ -627,8 +634,8 @@ onBeforeUnmount(() => {
             </section>
 
             <!-- Painel cliente -->
-            <ClientPanel :ticket="store.active"
-                         @close="closeActive" />
+            <ClientPanel v-if="panelOpen" :ticket="store.active"
+                         @close="panelOpen = false" />
         </div>
 
         <Dialog v-model:open="transferOpen">
