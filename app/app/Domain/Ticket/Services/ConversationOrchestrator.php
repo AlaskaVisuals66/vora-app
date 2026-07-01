@@ -87,7 +87,7 @@ class ConversationOrchestrator
                     'protocol'            => $this->protocols->next($tenantId),
                     'client_id'           => $client->id,
                     'whatsapp_session_id' => $session->id,
-                    'status'              => 'menu',
+                    'status'              => 'queued',
                     'channel'             => 'whatsapp',
                     'channel_type'        => 'whatsapp',
                 ]);
@@ -124,29 +124,12 @@ class ConversationOrchestrator
             $assign  = false;
             $ai      = null;
 
-            if ($justCreated) {
-                $replies[] = $this->menu->start($ticket);
-            }
-
-            $isMenuReset = ! $justCreated && $isText
-                && Str::lower($body) === '#menu'
-                && in_array($ticket->status, ['queued','open','pending'], true);
-
-            if ($isMenuReset) {
-                $ticket->forceFill(['sector_id' => null, 'assigned_to' => null, 'status' => 'menu'])->save();
-                $replies[] = $this->menu->start($ticket);
-            } elseif (! $justCreated && $ticket->status === 'menu' && $isText) {
-                $result   = $this->menu->consume($ticket, $body);
-                $replies[] = $result['reply'];
-                $assign    = $result['done'] && $result['sector'];
-            } elseif ($ticket->status === 'queued' && ! $ticket->assigned_to && $isText) {
-                $state = $ticket->menu_state ?: [];
-                if (empty($state['queue_notified'])) {
-                    $replies[] = strtr(config('helpdesk.menu.no_attendant'), ['{position}' => '—']);
-                    $state['queue_notified'] = true;
-                    $ticket->menu_state = $state;
-                    $ticket->save();
-                }
+            // Robô/menu DESLIGADO a pedido: nenhuma resposta automática ("Opção inválida",
+            // menu ou "aguarde na fila"). O atendente cuida de tudo. Conversa nova já entra
+            // em 'queued'; ticket antigo que ficou preso em 'menu' vira 'queued' aqui, sem
+            // responder nada ao cliente.
+            if (! $justCreated && $ticket->status === 'menu') {
+                $ticket->forceFill(['status' => 'queued'])->save();
             }
 
             if (in_array($ticket->status, ['open', 'pending'], true) && $ticket->sector_id && $isText) {
