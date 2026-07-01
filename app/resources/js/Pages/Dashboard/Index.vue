@@ -27,9 +27,10 @@ onMounted(async () => {
 
 const cards = computed(() => [
     {
-        label: 'Tickets em aberto',
-        value: data.value?.kpis?.open_tickets ?? 0,
+        label: 'Em fila',
+        value: data.value?.kpis?.queued ?? 0,
         icon: Inbox,
+        highlight: (data.value?.kpis?.queued ?? 0) > 0,
     },
     {
         label: 'Em atendimento',
@@ -49,10 +50,11 @@ const cards = computed(() => [
     },
 ]);
 
-// Last 7 days only — fewer data points, faster to read.
-const week = computed(() => (data.value?.timeseries || []).slice(-7));
-const maxTickets = computed(() => Math.max(1, ...week.value.map(d => d.tickets || 0)));
-const barHeight = (d) => `${Math.max(3, Math.round(((d.tickets || 0) / maxTickets.value) * 100))}%`;
+// Mensagens por dia (últimos 7 dias) — tem movimento real todo dia, ao contrário
+// de tickets criados (a maioria foi importada com data antiga).
+const week = computed(() => (data.value?.messages_series || []));
+const maxTickets = computed(() => Math.max(1, ...week.value.map(d => d.count || 0)));
+const barHeight = (d) => `${Math.max(3, Math.round(((d.count || 0) / maxTickets.value) * 100))}%`;
 
 const sectors = computed(() => data.value?.by_sector || []);
 const attendants = computed(() => data.value?.by_attendant || []);
@@ -81,14 +83,14 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                     <Card class="p-6">
                         <div class="flex items-center justify-between">
                             <span class="text-[13px] font-medium text-muted-foreground">{{ c.label }}</span>
-                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                                <component :is="c.icon" class="h-4 w-4 text-muted-foreground" />
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg" :class="c.highlight ? 'bg-primary/10' : 'bg-muted'">
+                                <component :is="c.icon" class="h-4 w-4" :class="c.highlight ? 'text-primary' : 'text-muted-foreground'" />
                             </div>
                         </div>
                         <div class="mt-5 flex items-baseline gap-1.5">
                             <Skeleton v-if="loading" class="h-9 w-20" />
                             <template v-else>
-                                <span class="text-[34px] font-semibold leading-none tracking-tight text-foreground tabular-nums">
+                                <span class="text-[34px] font-semibold leading-none tracking-tight tabular-nums" :class="c.highlight ? 'text-primary' : 'text-foreground'">
                                     {{ c.value }}
                                 </span>
                                 <span v-if="c.suffix" class="text-[15px] text-muted-foreground">{{ c.suffix }}</span>
@@ -105,7 +107,7 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                     <Card class="p-6">
                         <div class="mb-1">
                             <h3 class="text-[15px] font-semibold tracking-tight text-foreground">
-                                Atendimentos nos últimos 7 dias
+                                Mensagens nos últimos 7 dias
                             </h3>
                         </div>
 
@@ -119,7 +121,7 @@ const roleLabel = (r) => roleLabels[r] || r || 'Atendente';
                                      class="group relative flex-1 rounded-t-md bg-foreground/75 hover:bg-foreground transition-colors duration-200"
                                      :style="{ height: barHeight(d) }">
                                     <div class="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-[11px] font-medium text-background opacity-0 transition-opacity group-hover:opacity-100">
-                                        {{ d.tickets }} atendimento{{ d.tickets === 1 ? '' : 's' }} · {{ d.date }}
+                                        {{ d.count }} mensage{{ d.count === 1 ? 'm' : 'ns' }} · {{ d.date }}
                                     </div>
                                 </div>
                             </div>

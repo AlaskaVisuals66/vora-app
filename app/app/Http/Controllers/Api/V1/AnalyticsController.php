@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Auth\Models\User;
+use App\Domain\Message\Models\Message;
 use App\Domain\Sector\Models\Sector;
 use App\Domain\Ticket\Models\Ticket;
 use App\Http\Controllers\Controller;
@@ -100,12 +101,27 @@ class AnalyticsController extends Controller
             ])
             ->values();
 
+        // Série de mensagens por dia (últimos 7 dias) — tem movimento diário, ao
+        // contrário de tickets criados (a maioria foi importada com data antiga).
+        $msgSince = now()->subDays(6)->startOfDay();
+        $msgRows = Message::query()
+            ->select(DB::raw('DATE(created_at) as day'), DB::raw('count(*) as total'))
+            ->where('tenant_id', $tenantId)
+            ->where('created_at', '>=', $msgSince)
+            ->groupBy('day')
+            ->pluck('total', 'day');
+        $messagesSeries = collect(range(0, 6))->map(function ($i) use ($msgSince, $msgRows) {
+            $d = $msgSince->copy()->addDays($i)->toDateString();
+            return ['date' => Carbon::parse($d)->format('d/m'), 'count' => (int) ($msgRows[$d] ?? 0)];
+        })->values();
+
         return response()->json([
             'data' => [
-                'kpis'         => $kpis,
-                'timeseries'   => $timeseries,
-                'by_sector'    => $bySector,
-                'by_attendant' => $byAttendant,
+                'kpis'            => $kpis,
+                'timeseries'      => $timeseries,
+                'messages_series' => $messagesSeries,
+                'by_sector'       => $bySector,
+                'by_attendant'    => $byAttendant,
             ],
         ]);
     }
