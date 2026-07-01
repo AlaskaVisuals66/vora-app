@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuIte
 import { useConversationsStore } from '@/Stores/conversations';
 import { useAuth } from '@/Composables/useAuth';
 import { getEcho } from '@/lib/echo';
-import { Search, Send, MessagesSquare, Inbox, SlidersHorizontal, Check, ArrowLeft, MoreVertical, X, ArrowRightLeft, Paperclip } from 'lucide-vue-next';
+import { Search, Send, MessagesSquare, Inbox, SlidersHorizontal, Check, ArrowLeft, MoreVertical, X, ArrowRightLeft, Paperclip, PanelLeft } from 'lucide-vue-next';
 import AudioRecorder from '@/Components/AudioRecorder.vue';
 import { toast } from 'vue-sonner';
 import axios from 'axios';
@@ -40,6 +40,7 @@ const typingTimer = ref(null);
 const filterOpen = ref(false);
 const sectorPickerOpen = ref(false);
 const panelOpen = ref(false); // painel de detalhes do contato (direita) fica fechado por padrão
+const sectorsCollapsed = ref(false); // painel de setores (esquerda) pode ser recolhido pra ganhar tela
 
 const messagesWithDates = computed(() => {
     const out = [];
@@ -326,7 +327,7 @@ onBeforeUnmount(() => {
         <div class="flex h-full overflow-hidden">
 
             <!-- Coluna de setores -->
-            <aside class="hidden md:flex md:w-[200px] shrink-0 flex-col border-r border-border bg-card">
+            <aside v-if="!sectorsCollapsed" class="hidden md:flex md:w-[200px] shrink-0 flex-col border-r border-border bg-card">
                 <nav class="flex-1 overflow-y-auto p-2 space-y-0.5">
                     <!-- Todos -->
                     <button
@@ -391,9 +392,16 @@ onBeforeUnmount(() => {
                 :class="store.active ? 'hidden md:flex' : 'flex'"
             >
                 <div class="px-4 pt-4 pb-3 border-b border-border">
-                    <h2 class="hidden md:block text-[14px] font-semibold text-foreground mb-3">
-                        {{ currentSector ? currentSector.name : 'Todas as conversas' }}
-                    </h2>
+                    <div class="hidden md:flex items-center justify-between mb-3">
+                        <h2 class="text-[14px] font-semibold text-foreground truncate">
+                            {{ currentSector ? currentSector.name : 'Todas as conversas' }}
+                        </h2>
+                        <button @click="sectorsCollapsed = !sectorsCollapsed"
+                                :title="sectorsCollapsed ? 'Mostrar setores' : 'Recolher setores'"
+                                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                            <PanelLeft class="h-4 w-4" />
+                        </button>
+                    </div>
 
                     <!-- Sector picker (mobile only) -->
                     <div class="relative mb-3 md:hidden">
