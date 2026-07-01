@@ -568,11 +568,6 @@ onBeforeUnmount(() => {
                                         <ArrowRightLeft class="h-4 w-4" />
                                         Transferir setor
                                     </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem @click="closeActive" class="text-destructive focus:text-destructive">
-                                        <X class="h-4 w-4" />
-                                        Encerrar conversa
-                                    </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
